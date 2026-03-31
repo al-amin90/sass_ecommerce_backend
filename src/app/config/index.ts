@@ -17,6 +17,7 @@ export default {
     refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN,
   },
   db: {
+    tenancy_type: process.env.TENANCY_TYPE,
     singleUri: process.env.SINGLE_DB_URL,
     multiUri: process.env.MULTI_DB_URL,
     centralUri: process.env.CENTRAL_DB_URL,
@@ -24,5 +25,20 @@ export default {
     singleProductionUri: process.env.SINGLE_PRODUCTION_DB_URL,
     multiProductionUri: process.env.MULTI_PRODUCTION_DB_URL,
     centralProductionUri: process.env.CENTRAL_PRODUCTION_DB_URL,
+  },
+  poolConfig: {
+    maxTenantConnections: parseInt(
+      process.env.MAX_TENANT_CONNECTIONS as string,
+    ),
+    maxConnectionIdleTime: parseInt(
+      process.env.MAX_CONNECTION_IDLE_TIME as string,
+    ),
+    cleanupInterval: parseInt(process.env.CLEANUP_INTERVAL as string),
+    connectionTimeout: parseInt(process.env.CONNECTION_TIMEOUT as string),
+    poolSize: {
+      central: { min: 2, max: 10 },
+      single: { min: 10, max: 50 },
+      tenant: { min: 2, max: 10 },
+    },
   },
 };
