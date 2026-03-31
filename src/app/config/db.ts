@@ -1,7 +1,13 @@
 import EventEmitter from "events";
 import mongoose, { Connection } from "mongoose";
 import config from ".";
-import { ConnectionMetadata, DBConfig, TenancyType } from "../interface/db";
+import {
+  ConnectionMetadata,
+  ConnectionStats,
+  DBConfig,
+  HealthCheck,
+  TenancyType,
+} from "../interface/db";
 import AppError from "../errors/AppError";
 import status from "http-status";
 
@@ -15,8 +21,8 @@ class DBManager extends EventEmitter {
   private isProduction: boolean;
   private config: DBConfig;
 
-  private cleanupTimer: ReturnType<typeof setInterval> = null;
-  private isShuttingDown: boolean;
+  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
+  private isShuttingDown: boolean = false;
 
   constructor() {
     super();
@@ -80,10 +86,9 @@ class DBManager extends EventEmitter {
     const options = this.getConnectionOptions(this.config.poolSize.central);
     console.log("Connecting to Central DB...");
 
-    this.centralConnection = await mongoose.createConnection(
-      uris.central,
-      options,
-    );
+    this.centralConnection = await mongoose
+      .createConnection(uris.central, options)
+      .asPromise();
 
     this.setupConnectionHandlers(this.centralConnection, "CENTRAL_DB");
     console.log("Central DB connected.....");
@@ -146,9 +151,54 @@ class DBManager extends EventEmitter {
       await this.removeConnection(tenantId);
     }
 
-    if (this.tenantConnections.size > this.config.maxConnections) {
-      await this.remo;
+    if (this.tenantConnections.size >= this.config.maxConnections) {
+      await this.removeOldestIdleConnection();
     }
+
+    return this.createTenantConnection(tenantId);
+  }
+
+  private async createTenantConnection(tenantId: string): Promise<Connection> {
+    const uris = this.getDbUris();
+    const tenantDBName = `tenant_${tenantId}`;
+
+    const baseUri = uris.tenantBase.replace(/\/$/, "").replace(/\?.*$/, "");
+    const authParams = uris.tenantBase.match(/\?.*$/)?.[0] ?? "";
+    const tenantUri = `${baseUri}/${tenantDBName}${authParams}`;
+
+    const options = {
+      ...this.getConnectionOptions(this.config.poolSize.tenant),
+      dbName: tenantDBName,
+    };
+
+    console.log(`Creating connection: ${tenantId}///`);
+
+    const connection = await mongoose
+      .createConnection(tenantUri, options)
+      .asPromise();
+
+    //:::) verify correct DB
+    if (connection.db.databaseName !== tenantDBName) {
+      await connection.close();
+      throw new AppError(
+        status.INTERNAL_SERVER_ERROR,
+        `Wrong DB connected: ${connection.db.databaseName}, expected: ${tenantDBName}`,
+      );
+    }
+
+    this.setupConnectionHandlers(connection, tenantId);
+    this.tenantConnections.set(tenantId, connection);
+    this.updateConnectionMetadata(tenantId);
+
+    console.log(
+      `✅ Tenant connected: ${tenantId} (total: ${this.tenantConnections.size})`,
+    );
+    this.emit("tenantConnectionCreated", {
+      tenantId,
+      total: this.tenantConnections.size,
+    });
+
+    return connection;
   }
 
   // :::) matedata methods are here
@@ -188,4 +238,132 @@ class DBManager extends EventEmitter {
 
     if (oldestId) await this.removeConnection(oldestId);
   }
+
+  private startCleanupJob(): void {
+    if (this.cleanupTimer) return;
+
+    this.cleanupTimer = setInterval(() => {
+      if (this.isShuttingDown) return;
+      const now = Date.now();
+
+      for (const [tenantId, meta] of this.connectionMetadata) {
+        if (now - meta.lastAccess > this.config.maxIdleTime) {
+          void this.removeConnection(tenantId);
+        }
+      }
+    }, this.config.cleanupInterval);
+
+    this.emit("cleanupStarted");
+  }
+
+  // :::) utilis are here ----------- Connection event handlers
+  private setupConnectionHandlers(connection: Connection, id: string) {
+    connection.on("error", (err) => {
+      console.error(`❌ DB error [${id}]:`, err.message);
+      this.emit("connectionError", { id, error: err });
+    });
+
+    connection.on("disconnected", () => {
+      console.warn(`🔌 Disconnected: ${id}`);
+
+      if (id !== "CENTRAL_DB" && id !== "SINGLE_DB") {
+        this.tenantConnections.delete(id);
+        this.connectionMetadata.delete(id);
+      }
+      this.emit("connectionDisconnected", { id });
+    });
+    connection.on("reconnected", () =>
+      this.emit("connectionReconnected", { id }),
+    );
+  }
+
+  // :::) Monitoring are here
+  getStats(): ConnectionStats {
+    const tenants = [...this.connectionMetadata.entries()]
+      .map(([tenantId, meta]) => ({
+        tenantId,
+        readyState: this.tenantConnections.get(tenantId)?.readyState,
+        lastAccess: new Date(meta.lastAccess),
+        accessCount: meta.accessCount,
+        idleTime: Date.now() - meta.lastAccess,
+        age: Date.now() - meta.createdAt,
+      }))
+      .sort((a, b) => b.idleTime - a.idleTime);
+
+    return {
+      tenancyType: this.tenancyType,
+      environment: this.isProduction ? "production" : "development",
+      activeConnections: this.tenantConnections.size,
+      maxConnections: this.config.maxConnections,
+      central: this.centralConnection
+        ? {
+            readyState: this.centralConnection.readyState,
+            name: this.centralConnection.name,
+          }
+        : null,
+      single: this.singleConnection
+        ? {
+            readyState: this.singleConnection.readyState,
+            name: this.singleConnection.name,
+          }
+        : null,
+      tenants,
+    };
+  }
+
+  async healthCheck(): Promise<HealthCheck> {
+    const health: HealthCheck = {
+      status: "healthy",
+      timestamp: new Date(),
+      checks: {},
+    };
+
+    const ping = async (conn: Connection | null, key: string) => {
+      if (!conn) {
+        health.checks[key] = "not_initialized";
+        return;
+      }
+      try {
+        await conn.db.admin().ping();
+        health.checks[key] = "connected";
+      } catch {
+        health.checks[key] = "error";
+        health.status = "unhealthy";
+      }
+    };
+
+    if (this.tenancyType === "multi")
+      await ping(this.centralConnection, "central");
+    if (this.tenancyType === "single")
+      await ping(this.singleConnection, "single");
+
+    health.checks["tenantCount"] = this.tenantConnections.size;
+    return health;
+  }
+
+  // :::) gracefully shut down are here
+  async closeAllConnections(): Promise<void> {
+    if (this.isShuttingDown) return;
+    this.isShuttingDown = true;
+
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
+
+    const closing = [...this.tenantConnections.values()].map((c) => c.close());
+    await Promise.allSettled(closing);
+    this.tenantConnections.clear();
+    this.connectionMetadata.clear();
+
+    await this.centralConnection?.close();
+    await this.singleConnection?.close();
+    this.centralConnection = null;
+    this.singleConnection = null;
+
+    console.log("✅ All DB connections closed");
+    this.emit("shutdownComplete");
+  }
 }
+
+export const dbManager = new DBManager();

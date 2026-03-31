@@ -27,14 +27,12 @@ export default {
     centralProductionUri: process.env.CENTRAL_PRODUCTION_DB_URL,
   },
   poolConfig: {
-    maxTenantConnections: parseInt(
-      process.env.MAX_TENANT_CONNECTIONS as string,
-    ),
+    maxTenantConnections: parseInt(process.env.MAX_TENANT_CONNECTIONS ?? "100"),
     maxConnectionIdleTime: parseInt(
-      process.env.MAX_CONNECTION_IDLE_TIME as string,
+      process.env.MAX_CONNECTION_IDLE_TIME ?? "300000",
     ),
-    cleanupInterval: parseInt(process.env.CLEANUP_INTERVAL as string),
-    connectionTimeout: parseInt(process.env.CONNECTION_TIMEOUT as string),
+    cleanupInterval: parseInt(process.env.CLEANUP_INTERVAL ?? "60000"),
+    connectionTimeout: parseInt(process.env.CONNECTION_TIMEOUT ?? "10000"),
     poolSize: {
       central: { min: 2, max: 10 },
       single: { min: 10, max: 50 },
