@@ -177,6 +177,14 @@ class DBManager extends EventEmitter {
       .createConnection(tenantUri, options)
       .asPromise();
 
+    if (!connection.db) {
+      await connection.close();
+      throw new AppError(
+        status.INTERNAL_SERVER_ERROR,
+        `DB not initialized for tenant: ${tenantId}`,
+      );
+    }
+
     //:::) verify correct DB
     if (connection.db.databaseName !== tenantDBName) {
       await connection.close();
