@@ -29,10 +29,33 @@ class DBManager extends EventEmitter {
       connectionTimeout: config.poolConfig.connectionTimeout,
       poolSize: config.poolConfig.poolSize,
     };
-
-    // ::) Start cleanup interval
-    this.startCleanupInterval();
   }
 
-  private startCleanupInterval() {}
+  // :::) get software db urls
+  private getDbUris() {
+    return this.isProduction
+      ? {
+          central: config.db.centralProductionUri!,
+          single: config.db.singleProductionUri!,
+          tenantBase: config.db.multiProductionUri!,
+        }
+      : {
+          central: config.db.centralUri!,
+          single: config.db.singleUri!,
+          tenantBase: config.db.multiUri!,
+        };
+  }
+
+  private getConnectionOptions(poolSize: { min: number; max: number }) {
+    return {
+      maxPoolSize: poolSize.max,
+      minPoolSize: poolSize.min,
+      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: this.config.connectionTimeout,
+      heartbeatFrequencyMS: 10000,
+      retryWrites: true,
+      retryReads: true,
+      maxIdleTimeMS: this.config.maxIdleTime,
+    };
+  }
 }
