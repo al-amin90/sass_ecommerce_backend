@@ -10,6 +10,11 @@ export default {
   bcrypt_salt_rounds: process.env.BCRYPT_SALT_ROUNDS,
   default_password: process.env.DEFAULT_PASSWORD,
 
+  single_admin_email: process.env.SINGLE_ADMIN_EMAIL,
+  single_admin_password: process.env.SINGLE_ADMIN_PASSWORD,
+  super_admin_email: process.env.SUPER_ADMIN_EMAIL,
+  super_admin_password: process.env.SUPER_ADMIN_PASSWORD,
+
   jwt: {
     access_token: process.env.JWT_ACCESS_TOKEN,
     refresh_token: process.env.JWT_REFRESH_TOKEN,

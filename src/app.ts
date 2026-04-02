@@ -5,6 +5,7 @@ import cors from "cors";
 import GlobalErrorHandler from "./app/middlewares/GlobalErrorHandler";
 import NotFound from "./app/middlewares/NotFound";
 import config from "./app/config";
+import router from "./app/routes";
 
 const app: Application = express();
 
@@ -14,7 +15,7 @@ app.use(cookieParser());
 app.use(cors({ origin: ["localhost:3000s"] }));
 
 // __) all application route here
-// app.use("/api/v1", router);
+app.use("/api/v1", router);
 
 app.get("/", (req, res) => {
   res.send(`This app listening on port ${config.port}`);
