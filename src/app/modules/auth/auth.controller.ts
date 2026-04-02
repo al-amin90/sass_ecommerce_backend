@@ -17,6 +17,20 @@ const registerTenant = catchAsync(async (req, res, next) => {
   });
 });
 
+const approveTenant = catchAsync(async (req, res, next) => {
+  // const result = await authServices.approveTenanxcxSD req.body);
+  console.log("result", result);
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: `Tenant "${"tenantRequest.subdomain"}" approved and database created`,
+    data: {
+      subdomain: result.subdomain,
+    },
+  });
+});
+
 const loginUser = catchAsync(async (req, res, next) => {
   const result = await authServices.loginUser(req.body);
   const { refreshToken, accessToken } = result;
@@ -67,6 +81,7 @@ const loginUser = catchAsync(async (req, res, next) => {
 export const authControllers = {
   loginUser,
   registerTenant,
+  approveTenant,
   //   changePassword,
   //   refreshToken,
 };

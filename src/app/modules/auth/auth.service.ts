@@ -38,7 +38,7 @@ const registerTenantRequest = async (payload: TRegisterTenant) => {
   return request;
 };
 
-export const approveTenant = catchAsync(async (tenantId, payload) => {
+const approveTenant = catchAsync(async (tenantId, payload) => {
   let tenantDbCreated = false;
 
   const centralConn = dbManager.getCentralConnection();
@@ -58,11 +58,9 @@ export const approveTenant = catchAsync(async (tenantId, payload) => {
   if (tenantRequest.status === "approved")
     throw new AppError(status.NOT_FOUND, "Already approved");
 
-  // :::) Tenant DB তৈরি করো
   const tenantConn = await dbManager.getConnection(tenantRequest.subdomain);
   tenantDbCreated = true;
 
-  // :::) সেই DB-তে super_admin user তৈরি করো
   const User = ModelFactory.getModel(tenantConn, "User");
 
   const alreadyExists = await User.findOne({ email: tenantRequest.adminEmail });
@@ -70,23 +68,17 @@ export const approveTenant = catchAsync(async (tenantId, payload) => {
   if (!alreadyExists) {
     await User.create({
       email: tenantRequest.adminEmail,
-      password: tenantRequest.adminPassword, // schema pre-save hook hash করবে
+      password: tenantRequest.adminPassword,
       role: "super_admin",
-      userType: "Super Admin",
-      isActive: true,
     });
   }
 
-  await TenantRequest.findByIdAndUpdate(tenantId, {
+  const result = await TenantRequest.findByIdAndUpdate(tenantId, {
     status: "approved",
     approvedAt: new Date(),
   });
 
-  return res.status(200).json({
-    success: true,
-    message: `Tenant "${tenantRequest.subdomain}" approved and database created`,
-    subdomain: tenantRequest.subdomain,
-  });
+  return result;
 });
 
 const loginUser = async (payload: LoginBody) => {
@@ -239,4 +231,5 @@ export const authServices = {
   loginUser,
   changePassword,
   refreshToken,
+  approveTenant,
 };

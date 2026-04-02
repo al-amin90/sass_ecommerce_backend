@@ -2,6 +2,7 @@ import { Connection, Model, Schema } from "mongoose";
 import status from "http-status";
 import AppError from "../errors/AppError";
 import tenantSchema from "../modules/central/tenant.model";
+import userSchema from "../modules/user/user.model";
 
 export type CentralModelName =
   | "TenantRequest"
@@ -10,13 +11,16 @@ export type CentralModelName =
   | "CentralPayment"
   | "Subscription";
 
-export type TenantModelName = "System" | "Class" | "Section";
+export type TenantModelName = "User";
 
 export type ModelName = CentralModelName | TenantModelName;
 
 const schemaRegistry: Record<ModelName, Schema> = {
   // Central
   TenantRequest: tenantSchema,
+
+  // Tenant
+  User: userSchema,
 };
 
 const centralModelNames: CentralModelName[] = [
@@ -26,7 +30,7 @@ const centralModelNames: CentralModelName[] = [
   "CentralPayment",
   "Subscription",
 ];
-const tenantModelNames: TenantModelName[] = ["System", "Class", "Section"];
+const tenantModelNames: TenantModelName[] = ["User"];
 
 class ModelFactory {
   static getModel<T = unknown>(

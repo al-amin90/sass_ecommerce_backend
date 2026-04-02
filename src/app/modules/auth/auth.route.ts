@@ -13,6 +13,12 @@ router.post(
 );
 
 router.post(
+  "/approve/:id",
+  validateRequest(authValidation.LoginBodyValidationSchema),
+  authControllers.approveTenant,
+);
+
+router.post(
   "/login",
   validateRequest(authValidation.LoginBodyValidationSchema),
   authControllers.loginUser,

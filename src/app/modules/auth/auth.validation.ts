@@ -10,6 +10,13 @@ const registerTenantValidationSchema = z.object({
   }),
 });
 
+const approvedValidationSchema = z.object({
+  body: z.object({
+    subdomain: z.string(),
+    status: z.string(),
+  }),
+});
+
 const LoginBodyValidationSchema = z.object({
   body: z.object({
     email: z.string(),
@@ -35,4 +42,5 @@ export const authValidation = {
   LoginBodyValidationSchema,
   changePasswordValidationSchema,
   refreshTokenValidationSchema,
+  approvedValidationSchema,
 };
