@@ -6,6 +6,18 @@ import catchAsync from "../../utils/catchAsync";
 import { authServices } from "./auth.service";
 import config from "../../config";
 
+const registerTenant = catchAsync(async (req, res, next) => {
+  const result = await authServices.registerTenant(req.body);
+  const { refreshToken, accessToken } = result;
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "School Created Successfully",
+    data: {},
+  });
+});
+
 const loginUser = catchAsync(async (req, res, next) => {
   const result = await authServices.loginUser(req.body);
   const { refreshToken, accessToken } = result;
@@ -55,6 +67,7 @@ const loginUser = catchAsync(async (req, res, next) => {
 
 export const authControllers = {
   loginUser,
+  registerTenant,
   //   changePassword,
   //   refreshToken,
 };

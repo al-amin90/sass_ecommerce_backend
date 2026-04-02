@@ -1,4 +1,4 @@
-import z from "zod";
+import z, { email } from "zod";
 
 const registerTenantValidationSchema = z.object({
   body: z.object({
@@ -12,7 +12,7 @@ const registerTenantValidationSchema = z.object({
 
 const LoginBodyValidationSchema = z.object({
   body: z.object({
-    id: z.string(),
+    email: z.string(),
     password: z.string(),
   }),
 });
