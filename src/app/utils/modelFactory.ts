@@ -1,9 +1,10 @@
 import { Connection, Model, Schema } from "mongoose";
 import status from "http-status";
 import AppError from "../errors/AppError";
+import tenantSchema from "../modules/central/tenant.model";
 
 export type CentralModelName =
-  | "Plan"
+  | "TenantRequest"
   | "Invoice"
   | "Coupon"
   | "CentralPayment"
@@ -13,10 +14,13 @@ export type TenantModelName = "System" | "Class" | "Section";
 
 export type ModelName = CentralModelName | TenantModelName;
 
-const schemaRegistry: Record<ModelName, Schema> = {};
+const schemaRegistry: Record<ModelName, Schema> = {
+  // Central
+  TenantRequest: tenantSchema,
+};
 
 const centralModelNames: CentralModelName[] = [
-  "Plan",
+  "TenantRequest",
   "Invoice",
   "Coupon",
   "CentralPayment",

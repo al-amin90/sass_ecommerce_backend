@@ -7,13 +7,12 @@ import { authServices } from "./auth.service";
 import config from "../../config";
 
 const registerTenant = catchAsync(async (req, res, next) => {
-  const result = await authServices.registerTenant(req.body);
-  const { refreshToken, accessToken } = result;
+  const result = await authServices.registerTenantRequest(req.body);
 
   sendResponse(res, {
     statusCode: status.OK,
     success: true,
-    message: "School Created Successfully",
+    message: "Your Request is successful",
     data: {},
   });
 });

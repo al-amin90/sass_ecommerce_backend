@@ -9,7 +9,7 @@ const router = Router();
 router.post(
   "/register",
   validateRequest(authValidation.registerTenantValidationSchema),
-  authControllers.loginUser,
+  authControllers.registerTenant,
 );
 
 router.post(

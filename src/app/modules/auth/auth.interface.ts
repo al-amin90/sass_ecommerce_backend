@@ -5,6 +5,8 @@ export type TRegisterTenant = {
   adminPassword: string;
   contactPhone?: string;
   address?: string;
+  status: string;
+  approvedAt: string;
 };
 
 export type LoginBody = {

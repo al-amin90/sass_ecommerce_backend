@@ -2,64 +2,92 @@ import status from "http-status";
 import AppError from "../../errors/AppError";
 import { LoginBody, TChangePassword, TRegisterTenant } from "./auth.interface";
 
-// import { UserModel } from "../user/user.model";
-// import jwt, { JwtPayload } from "jsonwebtoken";
 import config from "../../config";
 import bcrypt from "bcrypt";
 import { createToken } from "./auth.utils";
 import { dbManager } from "../../config/db";
+import ModelFactory from "../../utils/modelFactory";
+import catchAsync from "../../utils/catchAsync";
 
-const registerTenant = async (payload: TRegisterTenant) => {
-  const {} = payload;
+const registerTenantRequest = async (payload: TRegisterTenant) => {
+  const { subdomain } = payload;
 
   console.log("it is hit now");
 
-  const subdomain = payload.subdomain.toLowerCase().trim();
+  const centralConn = dbManager.getCentralConnection();
 
-  const centralConnection = dbManager.getCentralConnection();
+  if (!centralConn)
+    throw new AppError(
+      status.INTERNAL_SERVER_ERROR,
+      "Central DB not available",
+    );
 
-  // const user = await UserModel.isUserExistByCustomId(payload.id)
+  const TenantRequest = ModelFactory.getModel(centralConn, "TenantRequest");
 
-  // if (!user) {
-  //   throw new AppError(status.NOT_FOUND, "The User Does't exists")
-  // }
+  const existing = await TenantRequest.findOne({
+    subdomain: subdomain,
+  });
+  console.log("existing", existing);
 
-  // const isDeleted = user.isDeleted
-  // if (isDeleted) {
-  //   throw new AppError(status.FORBIDDEN, 'The User is Deleted')
-  // }
+  if (existing) {
+    throw new AppError(status.CONFLICT, `This subdomain is already registered`);
+  }
 
-  // if (user.status === 'blocked') {
-  //   throw new AppError(status.FORBIDDEN, 'The User is Blocked')
-  // }
+  const request = await TenantRequest.create(payload);
 
-  // if (!(await UserModel.isPasswordMatch(payload.password, user.password))) {
-  //   throw new AppError(status.FORBIDDEN, 'Password do not match')
-  // }
-
-  const jwtPayload = {
-    id: "",
-    role: "super_admin",
-  };
-
-  const accessToken = createToken(
-    jwtPayload,
-    config.jwt.access_token as string,
-    config.jwt.access_expires_in as string,
-  );
-
-  const refreshToken = createToken(
-    jwtPayload,
-    config.jwt.refresh_token as string,
-    config.jwt.refresh_expires_in as string,
-  );
-
-  return {
-    accessToken,
-    refreshToken,
-    // needsPasswordChange: user.needsPasswordChange,
-  };
+  return request;
 };
+
+export const approveTenant = catchAsync(async (tenantId, payload) => {
+  let tenantDbCreated = false;
+
+  const centralConn = dbManager.getCentralConnection();
+  if (!centralConn)
+    throw new AppError(
+      status.INTERNAL_SERVER_ERROR,
+      "Central DB not available",
+    );
+
+  const TenantRequest = ModelFactory.getModel(centralConn, "TenantRequest");
+
+  const tenantRequest = await TenantRequest.findById(tenantId);
+
+  if (!tenantRequest)
+    throw new AppError(status.NOT_FOUND, "Tenant request not found");
+
+  if (tenantRequest.status === "approved")
+    throw new AppError(status.NOT_FOUND, "Already approved");
+
+  // :::) Tenant DB তৈরি করো
+  const tenantConn = await dbManager.getConnection(tenantRequest.subdomain);
+  tenantDbCreated = true;
+
+  // :::) সেই DB-তে super_admin user তৈরি করো
+  const User = ModelFactory.getModel(tenantConn, "User");
+
+  const alreadyExists = await User.findOne({ email: tenantRequest.adminEmail });
+
+  if (!alreadyExists) {
+    await User.create({
+      email: tenantRequest.adminEmail,
+      password: tenantRequest.adminPassword, // schema pre-save hook hash করবে
+      role: "super_admin",
+      userType: "Super Admin",
+      isActive: true,
+    });
+  }
+
+  await TenantRequest.findByIdAndUpdate(tenantId, {
+    status: "approved",
+    approvedAt: new Date(),
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: `Tenant "${tenantRequest.subdomain}" approved and database created`,
+    subdomain: tenantRequest.subdomain,
+  });
+});
 
 const loginUser = async (payload: LoginBody) => {
   const { email, password } = payload;
@@ -207,7 +235,7 @@ const refreshToken = async (token: string) => {
 };
 
 export const authServices = {
-  registerTenant,
+  registerTenantRequest,
   loginUser,
   changePassword,
   refreshToken,
