@@ -17,7 +17,7 @@ class DBManager extends EventEmitter {
   private tenantConnections: Map<string, Connection> = new Map();
   private connectionMetadata: Map<string, ConnectionMetadata> = new Map();
 
-  private tenancyType: TenancyType;
+  public tenancyType: TenancyType;
   private isProduction: boolean;
   private config: DBConfig;
 

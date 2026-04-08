@@ -12,7 +12,7 @@ const app: Application = express();
 // __) parsers
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({ origin: ["localhost:3000s"] }));
+app.use(cors({ origin: ["localhost:3000"] }));
 
 // __) all application route here
 app.use("/api/v1", router);

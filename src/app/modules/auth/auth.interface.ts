@@ -1,3 +1,5 @@
+import { Types } from "mongoose";
+
 export type TRegisterTenant = {
   businessName: string;
   subdomain: string;
@@ -19,8 +21,6 @@ export type TChangePassword = {
   oldPassword: string;
   newPassword: string;
 };
-
-import { Types } from "mongoose";
 
 export interface ITenantRequest extends Document {
   _id: Types.ObjectId;

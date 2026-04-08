@@ -5,6 +5,7 @@ import status from "http-status";
 import catchAsync from "../../utils/catchAsync";
 import { authServices } from "./auth.service";
 import config from "../../config";
+import { ITenantRequest } from "./auth.interface";
 
 const registerTenant = catchAsync(async (req, res, next) => {
   const result = await authServices.registerTenantRequest(req.body);
@@ -24,7 +25,7 @@ const approveTenant = catchAsync(async (req, res, next) => {
   sendResponse(res, {
     statusCode: status.OK,
     success: true,
-    message: `Tenant "${"tenantRequest.subdomain"}" approved and database created`,
+    message: `Tenant request approved and database created`,
     data: {
       subdomain: result,
     },

@@ -22,5 +22,3 @@ export interface IUserModel extends Model<IUser> {
     jwtIssuedTimeStamp: number,
   ): boolean;
 }
-
-export type TUserRole = keyof typeof USER_ROLE;
