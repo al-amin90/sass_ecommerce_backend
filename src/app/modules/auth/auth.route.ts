@@ -12,11 +12,7 @@ router.post(
   authControllers.registerTenant,
 );
 
-router.post(
-  "/approve/:id",
-  validateRequest(authValidation.LoginBodyValidationSchema),
-  authControllers.approveTenant,
-);
+router.post("/approve/:id", authControllers.approveTenant);
 
 router.post(
   "/login",

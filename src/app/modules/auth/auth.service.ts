@@ -1,6 +1,11 @@
 import status from "http-status";
 import AppError from "../../errors/AppError";
-import { LoginBody, TChangePassword, TRegisterTenant } from "./auth.interface";
+import {
+  ITenantRequest,
+  LoginBody,
+  TChangePassword,
+  TRegisterTenant,
+} from "./auth.interface";
 
 import config from "../../config";
 import bcrypt from "bcrypt";
@@ -11,8 +16,6 @@ import catchAsync from "../../utils/catchAsync";
 
 const registerTenantRequest = async (payload: TRegisterTenant) => {
   const { subdomain } = payload;
-
-  console.log("it is hit now");
 
   const centralConn = dbManager.getCentralConnection();
 
@@ -27,7 +30,6 @@ const registerTenantRequest = async (payload: TRegisterTenant) => {
   const existing = await TenantRequest.findOne({
     subdomain: subdomain,
   });
-  console.log("existing", existing);
 
   if (existing) {
     throw new AppError(status.CONFLICT, `This subdomain is already registered`);
@@ -38,7 +40,7 @@ const registerTenantRequest = async (payload: TRegisterTenant) => {
   return request;
 };
 
-const approveTenant = catchAsync(async (tenantId, payload) => {
+const approveTenant = async (subdomain: string) => {
   let tenantDbCreated = false;
 
   const centralConn = dbManager.getCentralConnection();
@@ -50,7 +52,9 @@ const approveTenant = catchAsync(async (tenantId, payload) => {
 
   const TenantRequest = ModelFactory.getModel(centralConn, "TenantRequest");
 
-  const tenantRequest = await TenantRequest.findById(tenantId);
+  const tenantRequest: ITenantRequest | null = await TenantRequest.findOne({
+    subdomain,
+  });
 
   if (!tenantRequest)
     throw new AppError(status.NOT_FOUND, "Tenant request not found");
@@ -73,13 +77,13 @@ const approveTenant = catchAsync(async (tenantId, payload) => {
     });
   }
 
-  const result = await TenantRequest.findByIdAndUpdate(tenantId, {
+  const result = await TenantRequest.findByIdAndUpdate(tenantRequest._id, {
     status: "approved",
     approvedAt: new Date(),
   });
 
   return result;
-});
+};
 
 const loginUser = async (payload: LoginBody) => {
   const { email, password } = payload;

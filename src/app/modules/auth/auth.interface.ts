@@ -19,3 +19,18 @@ export type TChangePassword = {
   oldPassword: string;
   newPassword: string;
 };
+
+import { Types } from "mongoose";
+
+export interface ITenantRequest extends Document {
+  _id: Types.ObjectId;
+  businessName: string;
+  subdomain: string;
+  adminEmail: string;
+  adminPassword: string;
+  contactPhone: string;
+  address: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: Date;
+  updatedAt: Date;
+}

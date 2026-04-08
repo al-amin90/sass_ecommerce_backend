@@ -3,10 +3,12 @@ import { Model } from "mongoose";
 export interface IUser {
   id: string;
   password: string;
+  email: string;
   needsPasswordChange: boolean;
   passwordChangeAt?: Date;
   role: "admin" | "user" | "super_admin";
   status: "blocked" | "in-progress";
+  isActive: Boolean;
 }
 
 export interface IUserModel extends Model<IUser> {

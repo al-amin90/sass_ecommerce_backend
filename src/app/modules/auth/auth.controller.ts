@@ -13,12 +13,12 @@ const registerTenant = catchAsync(async (req, res, next) => {
     statusCode: status.OK,
     success: true,
     message: "Your Request is successful",
-    data: {},
+    data: result,
   });
 });
 
 const approveTenant = catchAsync(async (req, res, next) => {
-  // const result = await authServices.approveTenanxcxSD req.body);
+  const result = await authServices.approveTenant(req.params.id as string);
   console.log("result", result);
 
   sendResponse(res, {
@@ -26,7 +26,7 @@ const approveTenant = catchAsync(async (req, res, next) => {
     success: true,
     message: `Tenant "${"tenantRequest.subdomain"}" approved and database created`,
     data: {
-      subdomain: result.subdomain,
+      subdomain: result,
     },
   });
 });
