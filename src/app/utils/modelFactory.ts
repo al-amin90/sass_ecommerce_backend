@@ -3,6 +3,7 @@ import status from "http-status";
 import AppError from "../errors/AppError";
 import tenantSchema from "../modules/central/tenant.model";
 import userSchema from "../modules/user/user.model";
+import categorySchema from "../modules/category/category.model";
 
 export type CentralModelName =
   | "TenantRequest"
@@ -11,7 +12,7 @@ export type CentralModelName =
   | "CentralPayment"
   | "Subscription";
 
-export type TenantModelName = "User";
+export type TenantModelName = "User" | "Category";
 
 export type ModelName = CentralModelName | TenantModelName;
 
@@ -21,6 +22,7 @@ const schemaRegistry: Record<ModelName, Schema> = {
 
   // Tenant
   User: userSchema,
+  Category: categorySchema,
 };
 
 const centralModelNames: CentralModelName[] = [
