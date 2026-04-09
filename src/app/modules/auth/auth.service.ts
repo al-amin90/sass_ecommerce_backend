@@ -92,82 +92,11 @@ const loginUser = async (payload: LoginBody) => {
 
   if (dbManager.tenancyType === "single") {
     return handleSingleTenantLogin(email, password);
+  } else if (dbManager.tenancyType === "multi") {
+    return await handleMultiTenantLoginAutoDetect(email, password, subdomain);
+  } else {
+    throw new AppError(status.NOT_FOUND, "Unknown tenancy");
   }
-  // else if (dbManager.tenancyType === "multi") {
-  //   return await handleMultiTenantLoginAutoDetect(email, password, school, res);
-  // } else {
-  //   return res.status(400).json({
-  //     success: false,
-  //     error: "Unknown tenancy type",
-  //   });
-  // }
-
-  // const centralConn = dbManager.getCentralConnection();
-  // if (!centralConn)
-  //   throw new AppError(
-  //     status.INTERNAL_SERVER_ERROR,
-  //     "Central DB not available",
-  //   );
-
-  // const envEmail = config.single_admin_email;
-  // const envPassword = config.single_admin_password;
-  // let role: string;
-
-  // console.log("it is hit now");
-
-  // if (!envEmail || !envPassword)
-  //   throw new AppError(status.UNAUTHORIZED, "Admin credentials not configured");
-
-  // if (email !== envEmail || password !== envPassword)
-  //   throw new AppError(status.UNAUTHORIZED, "Invalid credentials");
-
-  // const TenantRequest = ModelFactory.getModel(centralConn, "TenantRequest");
-
-  // const isTenantExist = await TenantRequest.findOne({ subdomain });
-
-  // if (!isTenantExist) {
-  //   throw new AppError(status.UNAUTHORIZED, "Tenant is Not Exist");
-  // }
-
-  // const tenantConn = dbManager.getConnection(isTenantExist.subdomain);
-
-  // const UserModel = ModelFactory.getModel(tenantConn, "User");
-
-  // const user = await UserModel.findOne({ email });
-
-  // if (!user) {
-  //   throw new AppError(status.NOT_FOUND, "The User Does't exists");
-  // }
-
-  // if (user.status === "blocked") {
-  //   throw new AppError(status.FORBIDDEN, "The User is Blocked");
-  // }
-
-  // if (!(await UserModel.isPasswordMatch(payload.password, user.password))) {
-  //   throw new AppError(status.FORBIDDEN, "Password do not match");
-  // }
-
-  // const jwtPayload = {
-  //   role: "super_admin",
-  // };
-
-  // const accessToken = createToken(
-  //   jwtPayload,
-  //   config.jwt.access_token as string,
-  //   config.jwt.access_expires_in as string,
-  // );
-
-  // const refreshToken = createToken(
-  //   jwtPayload,
-  //   config.jwt.refresh_token as string,
-  //   config.jwt.refresh_expires_in as string,
-  // );
-
-  // return {
-  //   accessToken,
-  //   refreshToken,
-  //   // needsPasswordChange: user.needsPasswordChange,
-  // };
 };
 
 const handleSingleTenantLogin = async (email: string, password: string) => {
@@ -214,11 +143,7 @@ const handleSingleTenantLogin = async (email: string, password: string) => {
     "User",
   )) as IUserModel;
 
-  console.log("i am here");
-
   const user = await UserModel.findOne({ email }).select("+password");
-
-  console.log("user", user);
 
   if (!user) {
     throw new AppError(status.FORBIDDEN, "Invalid email or password");
@@ -257,191 +182,118 @@ const handleSingleTenantLogin = async (email: string, password: string) => {
   };
 };
 
-// async function handleMultiTenantLoginAutoDetect(email, password, school, res) {
-//   try {
-//     await dbManager.initCentralConnection();
-//     const CentralSchool = ModelFactory.getModel(
-//       dbManager.centralConnection,
-//       "School",
-//     );
+const handleMultiTenantLoginAutoDetect = async (
+  email: string,
+  password: string,
+  subdomain: string,
+) => {
+  const envEmail = config.super_admin_email;
+  const envPassword = config.super_admin_password;
 
-//     const envEmail = process.env.CENTRAL_SUPER_ADMIN_EMAIL;
-//     const envPasswordPlain = process.env.CENTRAL_SUPER_ADMIN_PASSWORD;
+  if (!envEmail || !envPassword) {
+    throw new AppError(status.NOT_FOUND, "Admin credentials not configured");
+  }
 
-//     if (!envEmail || !envPasswordPlain) {
-//       return res.status(500).json({
-//         success: false,
-//         error: "Where is Super Admin!",
-//       });
-//     }
+  if (email === envEmail && password === envPassword) {
+    const jwtPayload = {
+      email: envEmail,
+      role: "super_admin",
+      school: subdomain,
+    };
 
-//     // Super admin login
-//     if (email === envEmail && password === envPasswordPlain) {
-//       const jwtPayload = {
-//         id: "",
-//         email: envEmail,
-//         role: process.env.ROLE,
-//         school: "school",
-//       };
+    const accessToken = createToken(
+      jwtPayload,
+      config.jwt.access_token as string,
+      config.jwt.access_expires_in as string,
+    );
 
-//       const token = generateToken(jwtPayload);
+    const refreshToken = createToken(
+      jwtPayload,
+      config.jwt.refresh_token as string,
+      config.jwt.refresh_expires_in as string,
+    );
 
-//       return res.status(200).json({
-//         success: true,
-//         message: "Login successful",
-//         user: {
-//           id: "",
-//           email: envEmail,
-//           school: "school",
-//         },
-//         token,
-//         needsPasswordChange: false,
-//       });
-//     }
+    return {
+      accessToken,
+      refreshToken,
+    };
+  }
 
-//     const activeSchool = await CentralSchool.findOne({
-//       subdomain: school,
-//     });
+  if (!subdomain) {
+    throw new AppError(
+      status.NOT_FOUND,
+      "Tenant identifier is required for multi-tenant login",
+    );
+  }
 
-//     if (!activeSchool) {
-//       return res.status(500).json({
-//         success: false,
-//         error: "You are not authorized!",
-//       });
-//     }
+  const centralConn = dbManager.getCentralConnection();
+  if (!centralConn)
+    throw new AppError(
+      status.INTERNAL_SERVER_ERROR,
+      "Central DB not available",
+    );
 
-//     if (!school) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "School identifier is required for multi-tenant login",
-//       });
-//     }
+  const TenantRequest = ModelFactory.getModel(centralConn, "TenantRequest");
 
-//     let tenantConnection = await dbManager.getTenantConnection(school);
-//     const User = ModelFactory.getModel(tenantConnection, "User");
-//     const Role = ModelFactory.getModel(tenantConnection, "Role");
+  const isTenantExist: ITenantRequest | null = await TenantRequest.findOne({
+    subdomain,
+  });
 
-//     const user = await User.findOne({
-//       email,
-//     }).select("+password");
+  if (!isTenantExist) {
+    throw new AppError(status.UNAUTHORIZED, "This Shop is Not Exist");
+  }
 
-//     if (!user) {
-//       console.log(`You are not authorized!`);
-//       return res.status(401).json({
-//         success: false,
-//         error: "You are not authorized!",
-//       });
-//     }
+  if (!isTenantExist?.isActive) {
+    throw new AppError(status.NOT_FOUND, "This Shop is Not Active");
+  }
 
-//     if (!user.isActive) {
-//       return res.status(403).json({
-//         success: false,
-//         error:
-//           "Your account has been deactivated. Please contact administrator.",
-//       });
-//     }
+  const tenantConn = await dbManager.getConnection(subdomain);
 
-//     if (!(await User.isPasswordMatch(password, user.password))) {
-//       return res.status(403).json({
-//         success: false,
-//         message: "Password doesn't match!",
-//       });
-//     }
+  const UserModel = (await ModelFactory.getModel<IUser>(
+    tenantConn,
+    "User",
+  )) as IUserModel;
 
-//     let role = null;
+  const user = await UserModel.findOne({
+    email,
+  }).select("+password");
 
-//     if (user.role && mongoose.Types.ObjectId.isValid(user.role)) {
-//       role = await Role.findById(user.role);
-//     }
+  if (!user) {
+    throw new AppError(status.FORBIDDEN, "You are not authorized!");
+  }
 
-//     console.log("user?.role", role);
+  if (!user.isActive) {
+    throw new AppError(status.FORBIDDEN, "Your account has been deactivated.");
+  }
 
-//     const jwtPayload = {
-//       id: user.id,
-//       email: user.email,
-//       userType: user.userType,
-//       childIds: user.childIds,
-//       role: role?.roleName || user?.role,
-//       school: activeSchool.subdomain,
-//     };
-//     console.log("jwtPayload", jwtPayload);
+  if (!(await UserModel.isPasswordMatch(password, user.password))) {
+    throw new AppError(status.FORBIDDEN, "Invalid Credential");
+  }
 
-//     const token = generateToken(jwtPayload);
+  const jwtPayload = {
+    email: user.email,
+    role: user?.role,
+    subdomain,
+  };
 
-//     // ============================================
-//     // PREPARE RESPONSE WITH SUBSCRIPTION STATUS
-//     // ============================================
-//     const response = {
-//       success: true,
-//       message: "Login successful",
-//       user: {
-//         id: user.id,
-//         email: user.email,
-//         userType: user.userType,
-//         role: role?.roleName || user?.role,
-//         school: activeSchool.subdomain,
-//       },
-//       token,
-//       needsPasswordChange: user?.needsPasswordChange || false,
-//     };
+  const accessToken = createToken(
+    jwtPayload,
+    config.jwt.access_token as string,
+    config.jwt.access_expires_in as string,
+  );
 
-//     // Add subscription status to response
-//     if (!subscriptionStatus.isActive) {
-//       const userType = user.userType;
+  const refreshToken = createToken(
+    jwtPayload,
+    config.jwt.refresh_token as string,
+    config.jwt.refresh_expires_in as string,
+  );
 
-//       // Determine user category
-//       const isSchoolAdmin =
-//         userType === "Super Admin" ||
-//         userType === "School Admin" ||
-//         (role && role.roleName === "super_admin");
-
-//       const isStaff = ["Teacher", "Staff", "Accountant", "Librarian"].includes(
-//         userType,
-//       );
-
-//       const isStudentOrParent = ["Student", "Parent"].includes(userType);
-
-//       response.subscriptionStatus = "EXPIRED";
-
-//       // School Admin → redirect to payment
-//       if (isSchoolAdmin) {
-//         response.redirectTo = "/payment";
-//         response.subscriptionMessage =
-//           "Your subscription has expired. Please renew to continue.";
-//         response.actionRequired = "PAYMENT_REQUIRED";
-//       }
-//       // Staff/Teachers → contact admin
-//       else if (isStaff) {
-//         response.subscriptionMessage =
-//           "Please contact the System Admin to clear the dues. Your account is in expired mode.";
-//         response.actionRequired = "CONTACT_ADMIN";
-//       }
-//       // Students/Parents → contact school
-//       else if (isStudentOrParent) {
-//         response.subscriptionMessage =
-//           "Please contact the School Admin for technical inactivity.";
-//         response.actionRequired = "CONTACT_SCHOOL";
-//       }
-//       // Default
-//       else {
-//         response.subscriptionMessage =
-//           "Your school's subscription has expired. Please contact administration.";
-//         response.actionRequired = "CONTACT_ADMIN";
-//       }
-//     } else {
-//       response.subscriptionStatus = "ACTIVE";
-//     }
-
-//     return res.status(200).json(response);
-//   } catch (error) {
-//     console.error("❌ Multi-tenant login error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       error: "Login failed",
-//       ...(process.env.NODE_ENV === "development" && { details: error.message }),
-//     });
-//   }
-// }
+  return {
+    accessToken,
+    refreshToken,
+    needsPasswordChange: user.needsPasswordChange,
+  };
+};
 
 const changePassword = async (
   userData: JwtPayload,

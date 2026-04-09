@@ -6,6 +6,7 @@ export type TRegisterTenant = {
   adminEmail: string;
   adminPassword: string;
   contactPhone?: string;
+  isActive: boolean;
   address?: string;
   status: string;
   approvedAt: string;
@@ -14,7 +15,7 @@ export type TRegisterTenant = {
 export type LoginBody = {
   email: string;
   password: string;
-  subdomain?: string;
+  subdomain: string;
 };
 
 export type TChangePassword = {
@@ -30,6 +31,7 @@ export interface ITenantRequest extends Document {
   adminPassword: string;
   contactPhone: string;
   address: string;
+  isActive: boolean;
   status: "pending" | "approved" | "rejected";
   createdAt: Date;
   updatedAt: Date;

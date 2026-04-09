@@ -1,7 +1,5 @@
-import { model, Schema } from "mongoose";
+import { Schema } from "mongoose";
 import { TRegisterTenant } from "../auth/auth.interface";
-import status from "http-status";
-import AppError from "../../errors/AppError";
 
 const tenantSchema = new Schema<TRegisterTenant>(
   {
@@ -37,6 +35,10 @@ const tenantSchema = new Schema<TRegisterTenant>(
       type: String,
       enum: ["pending", "approved", "failed", "canceled"],
       default: "pending",
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
     approvedAt: String,
   },
