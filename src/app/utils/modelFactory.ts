@@ -5,6 +5,10 @@ import tenantSchema from "../modules/central/tenant.model";
 import userSchema from "../modules/tenant/user/user.model";
 import categorySchema from "../modules/tenant/category/category.model";
 import colorSchema from "../modules/tenant/color/color.model";
+import {
+  productSchema,
+  variantSchema,
+} from "../modules/tenant/product/product.model";
 
 export type CentralModelName =
   | "TenantRequest"
@@ -13,7 +17,12 @@ export type CentralModelName =
   | "CentralPayment"
   | "Subscription";
 
-export type TenantModelName = "User" | "Category" | "Color";
+export type TenantModelName =
+  | "User"
+  | "Category"
+  | "Color"
+  | "Product"
+  | "Variant";
 
 export type ModelName = CentralModelName | TenantModelName;
 
@@ -25,6 +34,8 @@ const schemaRegistry: Record<ModelName, Schema> = {
   User: userSchema,
   Category: categorySchema,
   Color: colorSchema,
+  Product: productSchema,
+  Variant: variantSchema,
 };
 
 const centralModelNames: CentralModelName[] = [
@@ -34,7 +45,13 @@ const centralModelNames: CentralModelName[] = [
   "CentralPayment",
   "Subscription",
 ];
-const tenantModelNames: TenantModelName[] = ["User", "Category", "Color"];
+const tenantModelNames: TenantModelName[] = [
+  "User",
+  "Category",
+  "Color",
+  "Product",
+  "Variant",
+];
 
 class ModelFactory {
   static getModel<T = unknown>(

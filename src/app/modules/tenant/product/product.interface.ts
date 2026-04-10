@@ -1,7 +1,14 @@
-export type TVariant = {
+import { Types } from "mongoose";
+
+export type TStock = {
   size: number;
+  quantity: number;
+};
+
+export type TVariant = {
+  productID: Types.ObjectId;
   color: string;
-  stock: number;
+  stock: TStock[];
 };
 
 export type TProduct = {
@@ -12,8 +19,9 @@ export type TProduct = {
 
   price: number;
   discountPrice?: number;
+  categoryID: Types.ObjectId;
 
-  variants: TVariant[];
+  variantID: Types.ObjectId;
 
   images: string[];
 
