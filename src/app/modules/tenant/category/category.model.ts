@@ -1,6 +1,6 @@
 import { model, Schema } from "mongoose";
 
-import AppError from "../../errors/AppError";
+import AppError from "../../../errors/AppError";
 import status from "http-status";
 import { TCategory } from "./category.interface";
 

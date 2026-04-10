@@ -1,5 +1,5 @@
-import { dbManager } from "../../config/db";
-import ModelFactory from "../../utils/modelFactory";
+import { dbManager } from "../../../config/db";
+import ModelFactory from "../../../utils/modelFactory";
 import { TCategory } from "./category.interface";
 
 const createCategoryIntoDB = async (subdomain: string, payload: TCategory) => {

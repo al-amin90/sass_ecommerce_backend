@@ -2,8 +2,8 @@ import { Connection, Model, Schema } from "mongoose";
 import status from "http-status";
 import AppError from "../errors/AppError";
 import tenantSchema from "../modules/central/tenant.model";
-import userSchema from "../modules/user/user.model";
-import categorySchema from "../modules/category/category.model";
+import userSchema from "../modules/tenant/user/user.model";
+import categorySchema from "../modules/tenant/category/category.model";
 
 export type CentralModelName =
   | "TenantRequest"

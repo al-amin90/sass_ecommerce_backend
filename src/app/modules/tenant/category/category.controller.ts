@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import status from "http-status";
-import catchAsync from "../../utils/catchAsync";
-import sendResponse from "../../utils/SendResponse";
+import catchAsync from "../../../utils/catchAsync";
+import sendResponse from "../../../utils/SendResponse";
 import { categoryServices } from "./category.service";
 
 const createCategory = catchAsync(async (req, res, next) => {

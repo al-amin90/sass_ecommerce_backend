@@ -1,4 +1,5 @@
 import { Model } from "mongoose";
+import { USER_ROLE } from "./user.constant";
 
 export interface IUser {
   password: string;
@@ -20,3 +21,5 @@ export interface IUserModel extends Model<IUser> {
     jwtIssuedTimeStamp: number,
   ): boolean;
 }
+
+export type TUserRole = keyof typeof USER_ROLE;

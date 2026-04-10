@@ -12,9 +12,8 @@ import bcrypt from "bcrypt";
 import { createToken } from "./auth.utils";
 import { dbManager } from "../../config/db";
 import ModelFactory from "../../utils/modelFactory";
-import catchAsync from "../../utils/catchAsync";
-import { Response } from "express";
-import { IUser, IUserModel } from "../user/user.interface";
+import { IUser, IUserModel } from "../tenant/user/user.interface";
+import { JwtPayload } from "jsonwebtoken";
 
 const registerTenantRequest = async (payload: TRegisterTenant) => {
   const { subdomain } = payload;
@@ -43,8 +42,6 @@ const registerTenantRequest = async (payload: TRegisterTenant) => {
 };
 
 const approveTenant = async (subdomain: string) => {
-  let tenantDbCreated = false;
-
   const centralConn = dbManager.getCentralConnection();
   if (!centralConn)
     throw new AppError(
@@ -65,7 +62,6 @@ const approveTenant = async (subdomain: string) => {
     throw new AppError(status.NOT_FOUND, "Already approved");
 
   const tenantConn = await dbManager.getConnection(tenantRequest.subdomain);
-  tenantDbCreated = true;
 
   const User = ModelFactory.getModel(tenantConn, "User");
 
@@ -110,6 +106,7 @@ const handleSingleTenantLogin = async (email: string, password: string) => {
 
   if (email === envEmail && password === envPassword) {
     const jwtPayload = {
+      id: null,
       email: envEmail as string,
       role: "super_admin",
       subdomain: "bazar",
@@ -138,10 +135,10 @@ const handleSingleTenantLogin = async (email: string, password: string) => {
   if (!tenantConn)
     throw new AppError(status.INTERNAL_SERVER_ERROR, "Single DB not available");
 
-  const UserModel = (await ModelFactory.getModel<IUser>(
+  const UserModel = ModelFactory.getModel<IUser>(
     tenantConn,
     "User",
-  )) as IUserModel;
+  ) as IUserModel;
 
   const user = await UserModel.findOne({ email }).select("+password");
 
@@ -158,6 +155,7 @@ const handleSingleTenantLogin = async (email: string, password: string) => {
   }
 
   const jwtPayload = {
+    id: user._id,
     email: user.email,
     role: user?.role || null,
     subdomain: "bazar",
@@ -196,9 +194,10 @@ const handleMultiTenantLoginAutoDetect = async (
 
   if (email === envEmail && password === envPassword) {
     const jwtPayload = {
+      id: null,
       email: envEmail,
       role: "super_admin",
-      school: subdomain,
+      subdomain,
     };
 
     const accessToken = createToken(
@@ -271,6 +270,7 @@ const handleMultiTenantLoginAutoDetect = async (
   }
 
   const jwtPayload = {
+    id: user._id,
     email: user.email,
     role: user?.role,
     subdomain,
@@ -368,7 +368,7 @@ const refreshToken = async (token: string) => {
   }
 
   const jwtPayload = {
-    id: user.id,
+    id: user._id,
     role: user.role,
   };
 
