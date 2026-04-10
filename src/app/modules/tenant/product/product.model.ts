@@ -28,6 +28,8 @@ export const productSchema = new Schema<TProduct>(
     images: [{ type: String, required: true }],
 
     sku: { type: String, unique: true },
+    isActive: { type: Boolean, default: true },
+    isDeleted: { type: Boolean, default: false },
   },
   {
     timestamps: true,

@@ -5,8 +5,6 @@ import { TProduct, TVariant } from "./product.interface";
 import slugify from "slugify";
 import status from "http-status";
 
-const PRODUCT_SEARCHABLE_FIELDS = ["name", "description", "sku"];
-
 const createProductIntoDB = async (subdomain: string, payload: TProduct) => {
   const Product = await getTenantModel(subdomain, "Product");
 
@@ -21,12 +19,13 @@ const getAllProductsFromDB = async (
   query: Record<string, unknown>,
 ) => {
   const Product = await getTenantModel(subdomain, "Product");
+  const searchFields = ["name", "description", "sku"];
 
   const builder = new QueryBuilder(
     Product.find({ isDeleted: false }).populate("categoryID", "name slug"),
     query,
   )
-    .search(PRODUCT_SEARCHABLE_FIELDS)
+    .search(searchFields)
     .filter()
     .sort()
     .paginate()
