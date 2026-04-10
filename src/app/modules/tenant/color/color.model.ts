@@ -1,21 +1,16 @@
-import { model, Schema } from "mongoose";
+import { Schema } from "mongoose";
+import { TColor } from "./color.interface";
 
-import AppError from "../../../errors/AppError";
-import status from "http-status";
-import { TCalor } from "./color.interface";
-
-const colorSchema = new Schema<TCalor>(
-  {
-    name: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
-    color: {
-      type: String,
-    },
+const colorSchema = new Schema<TColor>({
+  name: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true,
   },
-);
+  color: {
+    type: String,
+  },
+});
 
 export default colorSchema;

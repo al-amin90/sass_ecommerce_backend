@@ -1,6 +1,4 @@
-import { dbManager } from "../../../config/db";
 import { getTenantModel } from "../../../utils/getTenantModel";
-import ModelFactory from "../../../utils/modelFactory";
 import { TColor } from "./color.interface";
 
 const createColorIntoDB = async (subdomain: string, payload: TColor) => {
@@ -44,7 +42,7 @@ const deleteColorFromDB = async (subdomain: string, id: string) => {
   return result;
 };
 
-export const ColorServices = {
+export const colorServices = {
   createColorIntoDB,
   getAllColorFromDB,
   getSingleColorFromDB,

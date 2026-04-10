@@ -23,4 +23,4 @@ router.patch(
 );
 router.delete("/:id", auth("admin"), colorControllers.deleteColor);
 
-export const categoryRouter = router;
+export const colorRouter = router;

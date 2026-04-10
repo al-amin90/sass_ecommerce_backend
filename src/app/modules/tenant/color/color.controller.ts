@@ -1,13 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 import status from "http-status";
 import catchAsync from "../../../utils/catchAsync";
 import sendResponse from "../../../utils/SendResponse";
-import { colorServices } from "./Color.service";
+import { colorServices } from "./color.service";
 
 const createColor = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
-  console.log("subdomain", subdomain);
 
   const result = await colorServices.createColorIntoDB(subdomain, req.body);
 
@@ -33,6 +30,7 @@ const getAllColor = catchAsync(async (req, res, next) => {
 
 const getSingleColor = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
+
   const result = await colorServices.getSingleColorFromDB(
     subdomain,
     req.params.id as string,
