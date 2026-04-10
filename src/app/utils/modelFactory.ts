@@ -12,7 +12,7 @@ export type CentralModelName =
   | "CentralPayment"
   | "Subscription";
 
-export type TenantModelName = "User" | "Category";
+export type TenantModelName = "User" | "Category" | "Color";
 
 export type ModelName = CentralModelName | TenantModelName;
 
@@ -32,7 +32,7 @@ const centralModelNames: CentralModelName[] = [
   "CentralPayment",
   "Subscription",
 ];
-const tenantModelNames: TenantModelName[] = ["User"];
+const tenantModelNames: TenantModelName[] = ["User", "Category", "Color"];
 
 class ModelFactory {
   static getModel<T = unknown>(
