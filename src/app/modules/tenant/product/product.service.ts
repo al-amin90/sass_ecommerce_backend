@@ -1,57 +1,277 @@
-import { dbManager } from "../../../config/db";
-import ModelFactory from "../../../utils/modelFactory";
-import { TProduct } from "./product.interface";
+import AppError from "../../../errors/AppError";
+import { getTenantModel } from "../../../utils/getTenantModel";
+import QueryBuilder from "../../../builder/QueryBuilder";
+import { TProduct, TVariant } from "./product.interface";
+import slugify from "slugify";
+import status from "http-status";
+
+const PRODUCT_SEARCHABLE_FIELDS = ["name", "description", "sku"];
+
+// ─────────────────────────────────────────
+// PRODUCT
+// ─────────────────────────────────────────
 
 const createProductIntoDB = async (subdomain: string, payload: TProduct) => {
-  const tenantConn = await dbManager.getConnection(subdomain);
-  const Product = ModelFactory.getModel(tenantConn, "Product");
+  const Product = await getTenantModel(subdomain, "Product");
+
+  // slug auto generate
+  payload.slug = slugify(payload.name, { lower: true, strict: true });
+
+  // discountPrice সবসময় price এর চেয়ে কম হতে হবে
+  if (
+    payload.discountPrice !== undefined &&
+    payload.discountPrice >= payload.price
+  ) {
+    throw new AppError(
+      status.BAD_REQUEST,
+      "Discount price must be less than original price",
+    );
+  }
 
   const result = await Product.create(payload);
   return result;
 };
 
-const getAllProductFromDB = async (subdomain: string) => {
-  const tenantConn = await dbManager.getConnection(subdomain);
-  const Product = ModelFactory.getModel(tenantConn, "Product");
+const getAllProductsFromDB = async (
+  subdomain: string,
+  query: Record<string, unknown>,
+) => {
+  const Product = await getTenantModel(subdomain, "Product");
 
-  const result = await Product.find();
-  return result;
+  const builder = new QueryBuilder(
+    Product.find({ isDeleted: false }).populate("categoryID", "name slug"),
+    query,
+  )
+    .search(PRODUCT_SEARCHABLE_FIELDS)
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const [data, meta] = await Promise.all([
+    builder.modelQuery,
+    builder.countTotal(),
+  ]);
+
+  return { data, meta };
 };
 
 const getSingleProductFromDB = async (subdomain: string, id: string) => {
-  const tenantConn = await dbManager.getConnection(subdomain);
-  const Product = ModelFactory.getModel(tenantConn, "Product");
+  const Product = await getTenantModel(subdomain, "Product");
 
-  const result = await Product.findById(id);
+  const result = await Product.findOne({
+    _id: id,
+    isDeleted: false,
+  }).populate("categoryID", "name slug");
+
+  if (!result) throw new AppError(status.NOT_FOUND, "Product not found");
+  return result;
+};
+
+const getProductBySlugFromDB = async (subdomain: string, slug: string) => {
+  const Product = await getTenantModel(subdomain, "Product");
+
+  const result = await Product.findOne({
+    slug,
+    isDeleted: false,
+  }).populate("categoryID", "name slug");
+
+  if (!result) throw new AppError(status.NOT_FOUND, "Product not found");
   return result;
 };
 
 const updateProductInDB = async (
   subdomain: string,
   id: string,
-  payload: TProduct,
+  payload: Partial<TProduct>,
 ) => {
-  const tenantConn = await dbManager.getConnection(subdomain);
-  const Product = ModelFactory.getModel(tenantConn, "Product");
+  const Product = await getTenantModel(subdomain, "Product");
+
+  // name পরিবর্তন হলে slug ও update করো
+  if (payload.name) {
+    payload.slug = slugify(payload.name, { lower: true, strict: true });
+  }
+
+  // discountPrice check
+  if (payload.discountPrice !== undefined) {
+    const existing = await Product.findById(id);
+    const priceToCheck = payload.price ?? existing?.price;
+    if (payload.discountPrice >= priceToCheck) {
+      throw new AppError(
+        status.BAD_REQUEST,
+        "Discount price must be less than original price",
+      );
+    }
+  }
 
   const result = await Product.findByIdAndUpdate(id, payload, {
     new: true,
+    runValidators: true,
   });
+
+  if (!result) throw new AppError(status.NOT_FOUND, "Product not found");
   return result;
 };
 
 const deleteProductFromDB = async (subdomain: string, id: string) => {
-  const tenantConn = await dbManager.getConnection(subdomain);
-  const Product = ModelFactory.getModel(tenantConn, "Product");
+  const Product = await getTenantModel(subdomain, "Product");
 
-  const result = await Product.findByIdAndDelete(id);
+  const result = await Product.findByIdAndUpdate(
+    id,
+    { isDeleted: true },
+    { new: true },
+  );
+
+  if (!result) throw new AppError(status.NOT_FOUND, "Product not found");
   return result;
+};
+
+// ─────────────────────────────────────────
+// VARIANT
+// ─────────────────────────────────────────
+
+const addVariantIntoDB = async (
+  subdomain: string,
+  productId: string,
+  payload: TVariant,
+) => {
+  const Product = await getTenantModel(subdomain, "Product");
+
+  const product = await Product.findOne({
+    _id: productId,
+    isDeleted: false,
+  });
+
+  if (!product) throw new AppError(status.NOT_FOUND, "Product not found");
+
+  // same color আগে থেকে আছে কিনা check করো
+  const colorExists = product.variant?.color === payload.color;
+  if (colorExists) {
+    throw new AppError(
+      status.CONFLICT,
+      `Variant with color "${payload.color}" already exists`,
+    );
+  }
+
+  // $push দিয়ে variants array তে নতুন variant add করো
+  const result = await Product.findByIdAndUpdate(
+    productId,
+    { $push: { variants: payload } },
+    { new: true, runValidators: true },
+  );
+
+  return result;
+};
+
+const updateVariantInDB = async (
+  subdomain: string,
+  productId: string,
+  variantId: string,
+  payload: Partial<TVariant>,
+) => {
+  const Product = await getTenantModel(subdomain, "Product");
+
+  // array এর specific element update করতে $ positional operator
+  const updatePayload: Record<string, unknown> = {};
+  if (payload.color) updatePayload["variants.$.color"] = payload.color;
+  if (payload.stock) updatePayload["variants.$.stock"] = payload.stock;
+
+  const result = await Product.findOneAndUpdate(
+    {
+      _id: productId,
+      "variants._id": variantId,
+      isDeleted: false,
+    },
+    { $set: updatePayload },
+    { new: true, runValidators: true },
+  );
+
+  if (!result) {
+    throw new AppError(status.NOT_FOUND, "Product or variant not found");
+  }
+
+  return result;
+};
+
+const deleteVariantFromDB = async (
+  subdomain: string,
+  productId: string,
+  variantId: string,
+) => {
+  const Product = await getTenantModel(subdomain, "Product");
+
+  // $pull দিয়ে array থেকে specific variant remove করো
+  const result = await Product.findByIdAndUpdate(
+    productId,
+    { $pull: { variants: { _id: variantId } } },
+    { new: true },
+  );
+
+  if (!result) throw new AppError(status.NOT_FOUND, "Product not found");
+  return result;
+};
+
+// ─────────────────────────────────────────
+// STOCK CHECK — order দেওয়ার আগে use করবে
+// ─────────────────────────────────────────
+
+const checkStockFromDB = async (
+  subdomain: string,
+  items: { productId: string; color: string; size: number; quantity: number }[],
+) => {
+  const Product = await getTenantModel(subdomain, "Product");
+
+  const results = await Promise.all(
+    items.map(async (item) => {
+      const product = await Product.findOne({
+        _id: item.productId,
+        isDeleted: false,
+      });
+
+      if (!product) {
+        return { ...item, available: false, currentStock: 0 };
+      }
+
+      // variant খোঁজো
+      const variant = product.variants?.find(
+        (v: TVariant) => v.color === item.color,
+      );
+
+      if (!variant) {
+        return { ...item, available: false, currentStock: 0 };
+      }
+
+      // stock খোঁজো
+      const stock = variant.stock?.find(
+        (s: { size: number; quantity: number }) => s.size === item.size,
+      );
+
+      const currentStock = stock?.quantity ?? 0;
+
+      return {
+        productId: item.productId,
+        color: item.color,
+        size: item.size,
+        requested: item.quantity,
+        currentStock,
+        available: currentStock >= item.quantity,
+      };
+    }),
+  );
+
+  const allAvailable = results.every((r) => r.available);
+  return { allAvailable, items: results };
 };
 
 export const productServices = {
   createProductIntoDB,
-  getAllProductFromDB,
+  getAllProductsFromDB,
   getSingleProductFromDB,
+  getProductBySlugFromDB,
   updateProductInDB,
   deleteProductFromDB,
+  addVariantIntoDB,
+  updateVariantInDB,
+  deleteVariantFromDB,
+  checkStockFromDB,
 };

@@ -6,7 +6,6 @@ export type TStock = {
 };
 
 export type TVariant = {
-  productID: Types.ObjectId;
   color: string;
   stock: TStock[];
 };
@@ -21,7 +20,7 @@ export type TProduct = {
   discountPrice?: number;
   categoryID: Types.ObjectId;
 
-  variantID: Types.ObjectId;
+  variant: TVariant[];
 
   images: string[];
 

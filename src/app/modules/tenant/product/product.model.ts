@@ -3,10 +3,6 @@ import { Schema } from "mongoose";
 import { TProduct, TVariant } from "./product.interface";
 
 export const variantSchema = new Schema<TVariant>({
-  productID: {
-    type: Schema.Types.ObjectId,
-    required: true,
-  },
   color: {
     type: String,
   },
@@ -27,7 +23,7 @@ export const productSchema = new Schema<TProduct>(
     discountPrice: { type: Number, required: true },
     categoryID: { type: Schema.Types.ObjectId, ref: "Category" },
 
-    variantID: { type: Schema.Types.ObjectId, ref: "Variant" },
+    variant: [variantSchema],
 
     images: [{ type: String, required: true }],
 

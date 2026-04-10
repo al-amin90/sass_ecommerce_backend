@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 import status from "http-status";
 import catchAsync from "../../../utils/catchAsync";
 import sendResponse from "../../../utils/SendResponse";
@@ -7,57 +5,79 @@ import { productServices } from "./product.service";
 
 const createProduct = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
-  console.log("subdomain", subdomain);
 
   const result = await productServices.createProductIntoDB(subdomain, req.body);
 
   sendResponse(res, {
-    statusCode: status.OK,
+    statusCode: status.CREATED,
     success: true,
-    message: "Product is create Successfully",
+    message: "Product created successfully",
     data: result,
   });
 });
 
-const getAllProduct = catchAsync(async (req, res, next) => {
+const getAllProducts = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
-  const result = await productServices.getAllProductFromDB(subdomain);
 
-  sendResponse(res, {
-    statusCode: status.OK,
-    success: true,
-    message: "All Product Retrieve data Successfully",
-    data: result,
-  });
-});
-
-const getSingleProduct = catchAsync(async (req, res, next) => {
-  const subdomain = req.headers["x-tenant"] as string;
-  const result = await productServices.getSingleProductFromDB(
+  const result = await productServices.getAllProductsFromDB(
     subdomain,
-    req.params.id as string,
+    req.query,
   );
 
   sendResponse(res, {
     statusCode: status.OK,
     success: true,
-    message: "Product Retrieve single data Successfully",
+    message: "Products retrieved successfully",
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
+const getSingleProduct = catchAsync(async (req, res, next) => {
+  const subdomain = req.headers["x-tenant"] as string;
+
+  const result = await productServices.getSingleProductFromDB(
+    subdomain,
+    req.params.id,
+  );
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Product retrieved successfully",
+    data: result,
+  });
+});
+
+const getProductBySlug = catchAsync(async (req, res, next) => {
+  const subdomain = req.headers["x-tenant"] as string;
+
+  const result = await productServices.getProductBySlugFromDB(
+    subdomain,
+    req.params.slug,
+  );
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Product retrieved successfully",
     data: result,
   });
 });
 
 const updateProduct = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
+
   const result = await productServices.updateProductInDB(
     subdomain,
-    req.params.id as string,
+    req.params.id,
     req.body,
   );
 
   sendResponse(res, {
     statusCode: status.OK,
     success: true,
-    message: "Product Update data Successfully",
+    message: "Product updated successfully",
     data: result,
   });
 });
@@ -65,23 +85,95 @@ const updateProduct = catchAsync(async (req, res, next) => {
 const deleteProduct = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
 
-  const result = await productServices.deleteProductFromDB(
+  await productServices.deleteProductFromDB(subdomain, req.params.id);
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Product deleted successfully",
+    data: {},
+  });
+});
+
+// ── Variant controllers ──
+
+const addVariant = catchAsync(async (req, res, next) => {
+  const subdomain = req.headers["x-tenant"] as string;
+
+  const result = await productServices.addVariantIntoDB(
     subdomain,
-    req.params.id as string,
+    req.params.id,
+    req.body,
+  );
+
+  sendResponse(res, {
+    statusCode: status.CREATED,
+    success: true,
+    message: "Variant added successfully",
+    data: result,
+  });
+});
+
+const updateVariant = catchAsync(async (req, res, next) => {
+  const subdomain = req.headers["x-tenant"] as string;
+
+  const result = await productServices.updateVariantInDB(
+    subdomain,
+    req.params.id, // productId
+    req.params.variantId,
+    req.body,
   );
 
   sendResponse(res, {
     statusCode: status.OK,
     success: true,
-    message: "Product deleted Successfully",
+    message: "Variant updated successfully",
+    data: result,
+  });
+});
+
+const deleteVariant = catchAsync(async (req, res, next) => {
+  const subdomain = req.headers["x-tenant"] as string;
+
+  await productServices.deleteVariantFromDB(
+    subdomain,
+    req.params.id, // productId
+    req.params.variantId,
+  );
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Variant deleted successfully",
     data: {},
   });
 });
 
+const checkStock = catchAsync(async (req, res, next) => {
+  const subdomain = req.headers["x-tenant"] as string;
+
+  const result = await productServices.checkStockFromDB(
+    subdomain,
+    req.body.items,
+  );
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Stock checked successfully",
+    data: result,
+  });
+});
+
 export const productControllers = {
-  createProduct: createProduct,
-  getAllProduct,
+  createProduct,
+  getAllProducts,
   getSingleProduct,
+  getProductBySlug,
   updateProduct,
   deleteProduct,
+  addVariant,
+  updateVariant,
+  deleteVariant,
+  checkStock,
 };
