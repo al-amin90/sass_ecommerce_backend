@@ -13,7 +13,6 @@ router.post(
   validateRequest(productValidations.createProductSchema),
   productControllers.createProduct,
 );
-
 router.get("/", productControllers.getAllProducts);
 
 router.get("/slug/:slug", productControllers.getProductBySlug);

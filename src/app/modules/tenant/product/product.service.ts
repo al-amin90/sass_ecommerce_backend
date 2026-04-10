@@ -19,6 +19,8 @@ const getAllProductsFromDB = async (
   query: Record<string, unknown>,
 ) => {
   const Product = await getTenantModel(subdomain, "Product");
+  await getTenantModel(subdomain, "Category");
+
   const searchFields = ["name", "description", "sku"];
 
   const builder = new QueryBuilder(
@@ -41,6 +43,7 @@ const getAllProductsFromDB = async (
 
 const getSingleProductFromDB = async (subdomain: string, id: string) => {
   const Product = await getTenantModel(subdomain, "Product");
+  await getTenantModel(subdomain, "Category");
 
   const result = await Product.findOne({
     _id: id,
@@ -53,6 +56,7 @@ const getSingleProductFromDB = async (subdomain: string, id: string) => {
 
 const getProductBySlugFromDB = async (subdomain: string, slug: string) => {
   const Product = await getTenantModel(subdomain, "Product");
+  await getTenantModel(subdomain, "Category");
 
   const result = await Product.findOne({
     slug,
@@ -70,21 +74,8 @@ const updateProductInDB = async (
 ) => {
   const Product = await getTenantModel(subdomain, "Product");
 
-  // name পরিবর্তন হলে slug ও update করো
   if (payload.name) {
     payload.slug = slugify(payload.name, { lower: true, strict: true });
-  }
-
-  // discountPrice check
-  if (payload.discountPrice !== undefined) {
-    const existing = await Product.findById(id);
-    const priceToCheck = payload.price ?? existing?.price;
-    if (payload.discountPrice >= priceToCheck) {
-      throw new AppError(
-        status.BAD_REQUEST,
-        "Discount price must be less than original price",
-      );
-    }
   }
 
   const result = await Product.findByIdAndUpdate(id, payload, {
