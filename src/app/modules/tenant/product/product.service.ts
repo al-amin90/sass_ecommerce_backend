@@ -7,26 +7,10 @@ import status from "http-status";
 
 const PRODUCT_SEARCHABLE_FIELDS = ["name", "description", "sku"];
 
-// ─────────────────────────────────────────
-// PRODUCT
-// ─────────────────────────────────────────
-
 const createProductIntoDB = async (subdomain: string, payload: TProduct) => {
   const Product = await getTenantModel(subdomain, "Product");
 
-  // slug auto generate
   payload.slug = slugify(payload.name, { lower: true, strict: true });
-
-  // discountPrice সবসময় price এর চেয়ে কম হতে হবে
-  if (
-    payload.discountPrice !== undefined &&
-    payload.discountPrice >= payload.price
-  ) {
-    throw new AppError(
-      status.BAD_REQUEST,
-      "Discount price must be less than original price",
-    );
-  }
 
   const result = await Product.create(payload);
   return result;

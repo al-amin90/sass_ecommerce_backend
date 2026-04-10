@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const stockSchema = z.object({
-  size: z.number({ message: "Size is required" }).min(30).max(50),
+  size: z.number({ message: "Size is required" }).min(0).max(50),
   quantity: z.number({ message: "Quantity is required" }).min(0),
 });
 
@@ -26,7 +26,7 @@ const createProductSchema = z.object({
     price: z.number({ message: "Price is required" }).min(0),
     discountPrice: z.number().min(0).optional(),
     categoryID: z.string({ message: "Category ID is required" }).min(1),
-    variant: variantSchema,
+    variant: z.array(variantSchema),
     images: z.array(z.string()).default([]),
     sku: z.string({ message: "SKU is required" }).min(1),
     isActive: z.boolean().default(true),

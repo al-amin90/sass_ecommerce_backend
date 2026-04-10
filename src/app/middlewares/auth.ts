@@ -16,7 +16,7 @@ import { dbManager } from "../config/db";
 const auth = (...requiredRoles: TUserRole[]) => {
   return catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+    const token = authHeader && authHeader.split(" ")[1];
 
     if (!token) {
       throw new AppError(status.FORBIDDEN, "Access token required");
@@ -24,9 +24,6 @@ const auth = (...requiredRoles: TUserRole[]) => {
 
     const decoded = jwt.verify(token, config.jwt.access_token as string);
     const { id, iat, email, role, subdomain } = decoded as JwtPayload;
-
-    console.log("decoded", decoded);
-    console.log("role", role);
 
     if (role === "super_admin") {
       req.user = decoded as JwtPayload;

@@ -137,7 +137,7 @@ const deleteVariant = catchAsync(async (req, res, next) => {
 
   await productServices.deleteVariantFromDB(
     subdomain,
-    req.params.id, // productId
+    req.params.id as string, // productId
     req.params.variantId,
   );
 
