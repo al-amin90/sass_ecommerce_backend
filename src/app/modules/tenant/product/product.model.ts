@@ -35,3 +35,25 @@ export const productSchema = new Schema<TProduct>(
     timestamps: true,
   },
 );
+
+export const productSchema = new Schema<TProduct>(
+  {
+    name: { type: String, required: true },
+    slug: { type: String, required: true, unique: true },
+
+    price: { type: Number, required: true },
+    discountPrice: { type: Number, required: true },
+    categoryID: { type: Schema.Types.ObjectId, ref: "Category" },
+
+    variant: [variantSchema],
+
+    images: [{ type: String, required: true }],
+
+    sku: { type: String, unique: true },
+    isActive: { type: Boolean, default: true },
+    isDeleted: { type: Boolean, default: false },
+  },
+  {
+    timestamps: true,
+  },
+);
