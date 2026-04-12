@@ -15,6 +15,8 @@ export default {
   super_admin_email: process.env.SUPER_ADMIN_EMAIL,
   super_admin_password: process.env.SUPER_ADMIN_PASSWORD,
 
+  cloudinary_url: process.env.CLOUDINARY_URL,
+
   jwt: {
     access_token: process.env.JWT_ACCESS_TOKEN,
     refresh_token: process.env.JWT_REFRESH_TOKEN,
