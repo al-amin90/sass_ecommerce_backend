@@ -2,11 +2,28 @@ import status from "http-status";
 import catchAsync from "../../../utils/catchAsync";
 import sendResponse from "../../../utils/SendResponse";
 import { productServices } from "./product.service";
+import uploadOnCloudinary from "../../../utils/cloudinary";
 
 const createProduct = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
 
-  const result = await productServices.createProductIntoDB(subdomain, req.body);
+  const files = req.files as Express.Multer.File[];
+  const imageUrls: string[] = [];
+
+  for (const file of files) {
+    const url = await uploadOnCloudinary(file.path, "products");
+    if (url) imageUrls.push(url);
+  }
+
+  const productData = {
+    ...req.body,
+    images: imageUrls,
+  };
+
+  const result = await productServices.createProductIntoDB(
+    subdomain,
+    productData,
+  );
 
   sendResponse(res, {
     statusCode: status.CREATED,
@@ -70,7 +87,7 @@ const updateProduct = catchAsync(async (req, res, next) => {
 
   const result = await productServices.updateProductInDB(
     subdomain,
-    req.params.id,
+    req.params.id as string,
     req.body,
   );
 
