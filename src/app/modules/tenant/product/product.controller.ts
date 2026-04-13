@@ -11,7 +11,7 @@ const createProduct = catchAsync(async (req, res, next) => {
   const imageUrls: string[] = [];
 
   for (const file of files) {
-    const url = await uploadOnCloudinary(file.path, "products");
+    const url = await uploadOnCloudinary(file.path, "products", subdomain);
     if (url) imageUrls.push(url);
   }
 

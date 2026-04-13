@@ -9,6 +9,7 @@ cloudinary.config({
 export const uploadOnCloudinary = async (
   localFilePath: string,
   folderName: string,
+  subdomain: string = "bazar",
 ): Promise<string | null> => {
   if (!localFilePath) return null;
 
@@ -17,7 +18,7 @@ export const uploadOnCloudinary = async (
       use_filename: true,
       unique_filename: true,
       overwrite: true,
-      folder: folderName,
+      folder: `sass-bazar/${subdomain}/${folderName}`,
       transformation: [
         { width: 800, crop: "limit" },
         { quality: "auto" },

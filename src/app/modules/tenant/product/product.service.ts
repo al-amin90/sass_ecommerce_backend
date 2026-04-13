@@ -99,7 +99,7 @@ const updateProductInDB = async (
 
   const newImageUrl: string[] = [];
   for (const file of files) {
-    const url = await uploadOnCloudinary(file.path, "products");
+    const url = await uploadOnCloudinary(file.path, "products", subdomain);
     if (url) newImageUrl.push(url);
   }
 
