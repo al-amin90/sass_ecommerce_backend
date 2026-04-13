@@ -7,11 +7,6 @@ export const extractPublicId = (url: string): string => {
     ? withVersion.slice(1)
     : withVersion;
 
-  console.log(
-    "pathParts[pathParts.length - 1]",
-    pathParts[pathParts.length - 1],
-  );
-
   let lastPart = pathParts[pathParts.length - 1] as string;
 
   const filename = lastPart.split(".")[0];

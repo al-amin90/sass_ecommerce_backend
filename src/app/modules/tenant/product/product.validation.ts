@@ -41,6 +41,7 @@ const updateProductSchema = z.object({
     discountPrice: z.number().min(0).optional(),
     categoryID: z.string().optional(),
     images: z.array(z.string()).optional(),
+    existingImages: z.array(z.string()).optional(),
     sku: z.string().optional(),
     isActive: z.boolean().optional(),
   }),

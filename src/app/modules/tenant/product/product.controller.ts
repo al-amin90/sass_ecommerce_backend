@@ -2,7 +2,7 @@ import status from "http-status";
 import catchAsync from "../../../utils/catchAsync";
 import sendResponse from "../../../utils/SendResponse";
 import { productServices } from "./product.service";
-import uploadOnCloudinary from "../../../utils/cloudinary";
+import { uploadOnCloudinary } from "../../../utils/cloudinary";
 
 const createProduct = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
@@ -85,9 +85,12 @@ const getProductBySlug = catchAsync(async (req, res, next) => {
 const updateProduct = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
 
+  const files = req.files as Express.Multer.File[];
+
   const result = await productServices.updateProductInDB(
     subdomain,
     req.params.id as string,
+    files,
     req.body,
   );
 

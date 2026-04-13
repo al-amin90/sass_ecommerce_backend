@@ -11,6 +11,7 @@ export type TVariant = {
 };
 
 export type TProduct = {
+  _id?: Types.ObjectId;
   name: string;
   slug: string;
 
@@ -23,6 +24,7 @@ export type TProduct = {
   variant: TVariant[];
 
   images: string[];
+  existingImages?: string[];
 
   sku: string;
 

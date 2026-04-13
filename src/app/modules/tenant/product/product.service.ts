@@ -4,6 +4,12 @@ import QueryBuilder from "../../../builder/QueryBuilder";
 import { TProduct, TVariant } from "./product.interface";
 import slugify from "slugify";
 import status from "http-status";
+import { extractPublicId } from "../../../utils/extractPublicId";
+import {
+  deleteManyFromCloudinary,
+  uploadOnCloudinary,
+} from "../../../utils/cloudinary";
+import { getRemovedImages } from "../../../utils/getRemovedImages";
 
 const createProductIntoDB = async (subdomain: string, payload: TProduct) => {
   const Product = await getTenantModel(subdomain, "Product");
@@ -70,6 +76,7 @@ const getProductBySlugFromDB = async (subdomain: string, slug: string) => {
 const updateProductInDB = async (
   subdomain: string,
   id: string,
+  files: Express.Multer.File[],
   payload: Partial<TProduct>,
 ) => {
   const Product = await getTenantModel(subdomain, "Product");
@@ -78,13 +85,35 @@ const updateProductInDB = async (
     payload.slug = slugify(payload.name, { lower: true, strict: true });
   }
 
+  const product: Partial<TProduct> | null = await Product.findById(id)
+    .select("images")
+    .lean();
+  if (!product) throw new AppError(status.NOT_FOUND, "Product not found");
+
+  let keptImg = payload.existingImages ?? [];
+  delete payload.existingImages;
+
+  const newImageUrl: string[] = [];
+  for (const file of files) {
+    const url = await uploadOnCloudinary(file.path, "products");
+    if (url) newImageUrl.push(url);
+  }
+
+  const dbImg = product.images ?? [];
+
+  const removedImg = getRemovedImages(dbImg, keptImg);
+  if (removedImg.length) {
+    await deleteManyFromCloudinary(removedImg);
+  }
+
+  payload.images = [...keptImg, ...newImageUrl];
+
   const result = await Product.findByIdAndUpdate(id, payload, {
     new: true,
     runValidators: true,
   });
 
-  if (!result) throw new AppError(status.NOT_FOUND, "Product not found");
-  return result;
+  return true;
 };
 
 const deleteProductFromDB = async (subdomain: string, id: string) => {
