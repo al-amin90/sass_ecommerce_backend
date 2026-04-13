@@ -119,10 +119,19 @@ const updateProductInDB = async (
 const deleteProductFromDB = async (subdomain: string, id: string) => {
   const Product = await getTenantModel(subdomain, "Product");
 
+  // -----------> use it when you want delete doc permanently
+  // const product: Partial<TProduct> | null = await Product.findById(id)
+  //   .select("images")
+  //   .lean();
+  // if (!product) throw new AppError(status.NOT_FOUND, "Product not found");
+
+  // if (product.images?.length) {
+  //   await deleteManyFromCloudinary(product.images);
+  // }
+
   const result = await Product.findByIdAndUpdate(
-    id,
+    { _id: id, isDeleted: false },
     { isDeleted: true },
-    { new: true },
   );
 
   if (!result) throw new AppError(status.NOT_FOUND, "Product not found");
