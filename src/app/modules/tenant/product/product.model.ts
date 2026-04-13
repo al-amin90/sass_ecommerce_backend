@@ -3,9 +3,7 @@ import { Schema } from "mongoose";
 import { TProduct, TVariant } from "./product.interface";
 
 export const variantSchema = new Schema<TVariant>({
-  color: {
-    type: String,
-  },
+  color: { type: Schema.Types.ObjectId, ref: "Color" },
   stock: [
     {
       size: { type: Number, required: true, min: 0 },

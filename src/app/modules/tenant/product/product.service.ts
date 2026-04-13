@@ -50,11 +50,15 @@ const getAllProductsFromDB = async (
 const getSingleProductFromDB = async (subdomain: string, id: string) => {
   const Product = await getTenantModel(subdomain, "Product");
   await getTenantModel(subdomain, "Category");
+  await getTenantModel(subdomain, "Color");
 
   const result = await Product.findOne({
     _id: id,
     isDeleted: false,
-  }).populate("categoryID", "name slug");
+  }).populate([
+    { path: "categoryID", select: "name slug" },
+    { path: "variant.color", select: "name hex" },
+  ]);
 
   if (!result) throw new AppError(status.NOT_FOUND, "Product not found");
   return result;

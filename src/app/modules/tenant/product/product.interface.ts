@@ -6,7 +6,7 @@ export type TStock = {
 };
 
 export type TVariant = {
-  color: string;
+  color: Types.ObjectId;
   stock: TStock[];
 };
 
