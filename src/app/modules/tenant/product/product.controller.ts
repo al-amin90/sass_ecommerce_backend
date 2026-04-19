@@ -7,6 +7,20 @@ import { uploadOnCloudinary } from "../../../utils/cloudinary";
 const createProduct = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
 
+  console.log("ff", req.body);
+
+  if (typeof req.body.variant === "string") {
+    req.body.variant = JSON.parse(req.body.variant);
+  }
+  console.log("ffagggggggg", req.body);
+
+  if (req.body.price) {
+    req.body.price = parseFloat(req.body.price);
+  }
+  if (req.body.discountPrice) {
+    req.body.discountPrice = parseFloat(req.body.discountPrice);
+  }
+
   const files = (req.files as Express.Multer.File[]) ?? [];
   const imageUrls: string[] = [];
 

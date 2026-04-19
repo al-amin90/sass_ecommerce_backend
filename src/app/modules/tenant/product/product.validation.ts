@@ -23,11 +23,26 @@ const createProductSchema = z.object({
   body: z.object({
     name: z.string({ message: "Name is required" }).min(1),
     description: z.string().optional(),
-    price: z.number({ message: "Price is required" }).min(0),
-    discountPrice: z.number().min(0).optional(),
+    price: z
+      .string({ message: "Price is required" })
+      .min(1)
+      .transform((v) => parseFloat(v)),
+    discountPrice: z
+      .string()
+      .optional()
+      .transform((v) => (v ? parseFloat(v) : undefined)),
     categoryID: z.string({ message: "Category ID is required" }).min(1),
-    variant: z.array(variantSchema),
-    images: z.array(z.string()).default([]),
+    variant: z
+      .string()
+      .transform((val) => {
+        try {
+          return JSON.parse(val);
+        } catch {
+          return [];
+        }
+      })
+      .pipe(z.array(variantSchema)),
+    images: z.array(z.any()).default([]),
     sku: z.string({ message: "SKU is required" }).min(1),
     isActive: z.boolean().default(true),
   }),
@@ -37,10 +52,10 @@ const updateProductSchema = z.object({
   body: z.object({
     name: z.string().min(1).optional(),
     description: z.string().optional(),
-    price: z.number().min(0).optional(),
-    discountPrice: z.number().min(0).optional(),
+    price: z.string().min(0).optional(),
+    discountPrice: z.string().min(0).optional(),
     categoryID: z.string().optional(),
-    images: z.array(z.string()).optional(),
+    images: z.array(z.any()).optional(),
     existingImages: z.array(z.string()).optional(),
     sku: z.string().optional(),
     isActive: z.boolean().optional(),

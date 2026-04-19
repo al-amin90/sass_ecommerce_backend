@@ -55,13 +55,16 @@ const getSingleProductFromDB = async (subdomain: string, id: string) => {
   const result = await Product.findOne({
     _id: id,
     isDeleted: false,
-  }).populate([
-    { path: "categoryID", select: "name slug" },
-    { path: "variant.color", select: "name hex" },
-  ]);
+  })
+    .populate([
+      { path: "categoryID", select: "name slug" },
+      { path: "variant.color", select: "name hex" },
+    ])
+    .lean<TProduct>();
 
   if (!result) throw new AppError(status.NOT_FOUND, "Product not found");
-  return result;
+  const formate = { ...result, existingImages: result.images, images: [] };
+  return formate;
 };
 
 const getProductBySlugFromDB = async (subdomain: string, slug: string) => {
