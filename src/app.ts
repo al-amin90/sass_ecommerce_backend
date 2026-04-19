@@ -14,7 +14,24 @@ const app: Application = express();
 // __) parsers
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({ origin: ["localhost:3000"] }));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      /\.localhost:\d{4}$/, // Matches alamin.localhost:3000, any.localhost:3000
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+      "x-tenant",
+    ],
+    exposedHeaders: ["Authorization"],
+  }),
+);
 
 // __) all application route here
 app.use("/api/v1", router);

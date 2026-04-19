@@ -7,12 +7,14 @@ import { uploadOnCloudinary } from "../../../utils/cloudinary";
 const createProduct = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
 
-  const files = req.files as Express.Multer.File[];
+  const files = (req.files as Express.Multer.File[]) ?? [];
   const imageUrls: string[] = [];
 
-  for (const file of files) {
-    const url = await uploadOnCloudinary(file.path, "products", subdomain);
-    if (url) imageUrls.push(url);
+  if (files) {
+    for (const file of files) {
+      const url = await uploadOnCloudinary(file.path, "products", subdomain);
+      if (url) imageUrls.push(url);
+    }
   }
 
   const productData = {
