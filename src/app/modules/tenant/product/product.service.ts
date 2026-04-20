@@ -146,91 +146,6 @@ const deleteProductFromDB = async (subdomain: string, id: string) => {
 };
 
 // ─────────────────────────────────────────
-// VARIANT
-// ─────────────────────────────────────────
-
-const addVariantIntoDB = async (
-  subdomain: string,
-  productId: string,
-  payload: TVariant,
-) => {
-  const Product = await getTenantModel(subdomain, "Product");
-
-  const product = await Product.findOne({
-    _id: productId,
-    isDeleted: false,
-  });
-
-  if (!product) throw new AppError(status.NOT_FOUND, "Product not found");
-
-  // same color আগে থেকে আছে কিনা check করো
-  const colorExists = product.variant?.color === payload.color;
-  if (colorExists) {
-    throw new AppError(
-      status.CONFLICT,
-      `Variant with color "${payload.color}" already exists`,
-    );
-  }
-
-  // $push দিয়ে variants array তে নতুন variant add করো
-  const result = await Product.findByIdAndUpdate(
-    productId,
-    { $push: { variants: payload } },
-    { new: true, runValidators: true },
-  );
-
-  return result;
-};
-
-const updateVariantInDB = async (
-  subdomain: string,
-  productId: string,
-  variantId: string,
-  payload: Partial<TVariant>,
-) => {
-  const Product = await getTenantModel(subdomain, "Product");
-
-  // array এর specific element update করতে $ positional operator
-  const updatePayload: Record<string, unknown> = {};
-  if (payload.color) updatePayload["variants.$.color"] = payload.color;
-  if (payload.stock) updatePayload["variants.$.stock"] = payload.stock;
-
-  const result = await Product.findOneAndUpdate(
-    {
-      _id: productId,
-      "variants._id": variantId,
-      isDeleted: false,
-    },
-    { $set: updatePayload },
-    { new: true, runValidators: true },
-  );
-
-  if (!result) {
-    throw new AppError(status.NOT_FOUND, "Product or variant not found");
-  }
-
-  return result;
-};
-
-const deleteVariantFromDB = async (
-  subdomain: string,
-  productId: string,
-  variantId: string,
-) => {
-  const Product = await getTenantModel(subdomain, "Product");
-
-  // $pull দিয়ে array থেকে specific variant remove করো
-  const result = await Product.findByIdAndUpdate(
-    productId,
-    { $pull: { variants: { _id: variantId } } },
-    { new: true },
-  );
-
-  if (!result) throw new AppError(status.NOT_FOUND, "Product not found");
-  return result;
-};
-
-// ─────────────────────────────────────────
 // STOCK CHECK — order দেওয়ার আগে use করবে
 // ─────────────────────────────────────────
 
@@ -289,8 +204,5 @@ export const productServices = {
   getProductBySlugFromDB,
   updateProductInDB,
   deleteProductFromDB,
-  addVariantIntoDB,
-  updateVariantInDB,
-  deleteVariantFromDB,
   checkStockFromDB,
 };

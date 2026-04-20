@@ -133,58 +133,6 @@ const deleteProduct = catchAsync(async (req, res, next) => {
 
 // ── Variant controllers ──
 
-const addVariant = catchAsync(async (req, res, next) => {
-  const subdomain = req.headers["x-tenant"] as string;
-
-  const result = await productServices.addVariantIntoDB(
-    subdomain,
-    req.params.id,
-    req.body,
-  );
-
-  sendResponse(res, {
-    statusCode: status.CREATED,
-    success: true,
-    message: "Variant added successfully",
-    data: result,
-  });
-});
-
-const updateVariant = catchAsync(async (req, res, next) => {
-  const subdomain = req.headers["x-tenant"] as string;
-
-  const result = await productServices.updateVariantInDB(
-    subdomain,
-    req.params.id, // productId
-    req.params.variantId,
-    req.body,
-  );
-
-  sendResponse(res, {
-    statusCode: status.OK,
-    success: true,
-    message: "Variant updated successfully",
-    data: result,
-  });
-});
-
-const deleteVariant = catchAsync(async (req, res, next) => {
-  const subdomain = req.headers["x-tenant"] as string;
-
-  await productServices.deleteVariantFromDB(
-    subdomain,
-    req.params.id as string, // productId
-    req.params.variantId,
-  );
-
-  sendResponse(res, {
-    statusCode: status.OK,
-    success: true,
-    message: "Variant deleted successfully",
-    data: {},
-  });
-});
-
 const checkStock = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
 
@@ -208,8 +156,6 @@ export const productControllers = {
   getProductBySlug,
   updateProduct,
   deleteProduct,
-  addVariant,
-  updateVariant,
-  deleteVariant,
+
   checkStock,
 };

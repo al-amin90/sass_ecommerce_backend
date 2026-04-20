@@ -50,31 +50,32 @@ const createProductSchema = z.object({
 
 const updateProductSchema = z.object({
   body: z.object({
-    name: z.string().min(1).optional(),
+    name: z.string().optional(),
     description: z.string().optional(),
-    price: z.string().min(0).optional(),
-    discountPrice: z.string().min(0).optional(),
+
+    price: z.string().transform(Number).optional(),
+    discountPrice: z.string().transform(Number).optional(),
+
     categoryID: z.string().optional(),
-    images: z.array(z.any()).optional(),
-    existingImages: z.array(z.string()).optional(),
+    images: z.array(z.any()).default([]).optional(),
+    existingImages: z
+      .string()
+      .optional()
+      .transform((val) => (val ? JSON.parse(val) : [])),
+
     sku: z.string().optional(),
     isActive: z.boolean().optional(),
-  }),
-});
 
-const updateVariantSchema = z.object({
-  body: z.object({
-    color: z.string().min(1).optional(),
-    stock: z
-      .array(stockSchema)
-      .min(1)
-      .refine(
-        (stocks) => {
-          const sizes = stocks.map((s) => s.size);
-          return sizes.length === new Set(sizes).size;
-        },
-        { message: "Duplicate sizes are not allowed" },
-      )
+    variant: z
+      .string()
+      .transform((val) => {
+        try {
+          return JSON.parse(val);
+        } catch {
+          return [];
+        }
+      })
+      .pipe(z.array(variantSchema))
       .optional(),
   }),
 });
@@ -82,5 +83,4 @@ const updateVariantSchema = z.object({
 export const productValidations = {
   createProductSchema,
   updateProductSchema,
-  updateVariantSchema,
 };

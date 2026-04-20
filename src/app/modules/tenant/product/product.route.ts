@@ -24,32 +24,12 @@ router.get("/:id", productControllers.getSingleProduct);
 router.patch(
   "/:id",
   auth("admin"),
+  upload.array("images", 10),
   validateRequest(productValidations.updateProductSchema),
   productControllers.updateProduct,
 );
 
 router.delete("/:id", auth("admin"), productControllers.deleteProduct);
-
-// ── Variant routes ──
-router.post(
-  "/:id/variants",
-  auth("admin"),
-  validateRequest(productValidations.updateVariantSchema),
-  productControllers.addVariant,
-);
-
-router.patch(
-  "/:id/variants/:variantId",
-  auth("admin"),
-  validateRequest(productValidations.updateVariantSchema),
-  productControllers.updateVariant,
-);
-
-router.delete(
-  "/:id/variants/:variantId",
-  auth("admin"),
-  productControllers.deleteVariant,
-);
 
 // ── Stock check route ──
 router.post("/check-stock", productControllers.checkStock);
