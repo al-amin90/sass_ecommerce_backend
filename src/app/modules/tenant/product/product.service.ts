@@ -115,7 +115,7 @@ const updateProductInDB = async (
 
   payload.images = [...keptImg, ...newImageUrl];
 
-  console.log("payload", payload);
+  console.log("payload", payload.images);
   const result = await Product.findByIdAndUpdate(id, payload, {
     new: true,
     runValidators: true,
