@@ -7,12 +7,9 @@ import { uploadOnCloudinary } from "../../../utils/cloudinary";
 const createProduct = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
 
-  console.log("ff", req.body);
-
   if (typeof req.body.variant === "string") {
     req.body.variant = JSON.parse(req.body.variant);
   }
-  console.log("ffagggggggg", req.body);
 
   if (req.body.price) {
     req.body.price = parseFloat(req.body.price);
@@ -71,7 +68,7 @@ const getSingleProduct = catchAsync(async (req, res, next) => {
 
   const result = await productServices.getSingleProductFromDB(
     subdomain,
-    req.params.id,
+    req.params.id as string,
   );
 
   sendResponse(res, {
@@ -101,6 +98,14 @@ const getProductBySlug = catchAsync(async (req, res, next) => {
 const updateProduct = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
 
+  if (req.body.variant && typeof req.body.variant === "string") {
+    req.body.variant = JSON.parse(req.body.variant);
+  }
+
+  if (req.body.existingImages && typeof req.body.existingImages === "string") {
+    req.body.existingImages = JSON.parse(req.body.existingImages);
+  }
+
   const files = req.files as Express.Multer.File[];
 
   const result = await productServices.updateProductInDB(
@@ -121,7 +126,7 @@ const updateProduct = catchAsync(async (req, res, next) => {
 const deleteProduct = catchAsync(async (req, res, next) => {
   const subdomain = req.headers["x-tenant"] as string;
 
-  await productServices.deleteProductFromDB(subdomain, req.params.id);
+  await productServices.deleteProductFromDB(subdomain, req.params.id as string);
 
   sendResponse(res, {
     statusCode: status.OK,

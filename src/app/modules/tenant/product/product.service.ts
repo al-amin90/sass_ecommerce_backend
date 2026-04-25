@@ -115,12 +115,13 @@ const updateProductInDB = async (
 
   payload.images = [...keptImg, ...newImageUrl];
 
+  console.log("payload", payload);
   const result = await Product.findByIdAndUpdate(id, payload, {
     new: true,
     runValidators: true,
   });
 
-  return true;
+  return result;
 };
 
 const deleteProductFromDB = async (subdomain: string, id: string) => {
