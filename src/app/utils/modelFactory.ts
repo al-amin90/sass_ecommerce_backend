@@ -9,6 +9,7 @@ import {
   productSchema,
   variantSchema,
 } from "../modules/tenant/product/product.model";
+import orderSchema from "../modules/tenant/order/order.model";
 
 export type CentralModelName =
   | "TenantRequest"
@@ -22,7 +23,8 @@ export type TenantModelName =
   | "Category"
   | "Color"
   | "Product"
-  | "Variant";
+  | "Variant"
+  | "Order";
 
 export type ModelName = CentralModelName | TenantModelName;
 
@@ -36,6 +38,7 @@ const schemaRegistry: Record<ModelName, Schema> = {
   Color: colorSchema,
   Product: productSchema,
   Variant: variantSchema,
+  Order: orderSchema,
 };
 
 const centralModelNames: CentralModelName[] = [
@@ -51,6 +54,7 @@ const tenantModelNames: TenantModelName[] = [
   "Color",
   "Product",
   "Variant",
+  "Order",
 ];
 
 class ModelFactory {

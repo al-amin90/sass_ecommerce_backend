@@ -58,7 +58,7 @@ const getSingleProductFromDB = async (subdomain: string, id: string) => {
   })
     .populate([
       { path: "categoryID", select: "name slug" },
-      { path: "variant.color", select: "name hex" },
+      { path: "variant.color", select: "name color" },
     ])
     .lean<TProduct>();
 

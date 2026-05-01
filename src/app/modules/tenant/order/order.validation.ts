@@ -1,0 +1,33 @@
+import { z } from "zod";
+
+// Order Item Validation
+export const orderItemSchema = z.object({
+  productId: z.string().min(1, "Product ID is required"),
+  quantity: z.number().min(1, "Quantity must be at least 1"),
+  selectedSize: z.string().min(1, "Size is required"),
+  selectedColor: z.string().min(1, "Color is required"),
+  price: z.number().min(0, "Price must be positive"),
+});
+
+// Guest Info Validation
+export const guestInfoSchema = z.object({
+  fullName: z.string().min(2, "Full name must be at least 2 characters"),
+  phone: z.string().min(10, "Phone must be at least 10 digits"),
+  address: z.string().min(5, "Address must be at least 5 characters"),
+  city: z.string().min(2, "City must be at least 2 characters"),
+  postalCode: z.string().optional(),
+});
+
+// Create Order Validation
+const createOrderSchema = z.object({
+  body: z.object({
+    guestCheckout: z.boolean(),
+    guestEmail: z.string().email("Invalid email").optional(),
+    guestInfo: guestInfoSchema.optional(),
+    items: z.array(orderItemSchema).min(1, "At least one item is required"),
+    totalPrice: z.number().min(0, "Total price must be positive"),
+    paymentMethod: z.enum(["cash", "card"]),
+  }),
+});
+
+export const orderValidations = { createOrderSchema };
