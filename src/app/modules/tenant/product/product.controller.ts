@@ -84,7 +84,7 @@ const getProductBySlug = catchAsync(async (req, res, next) => {
 
   const result = await productServices.getProductBySlugFromDB(
     subdomain,
-    req.params.slug,
+    req.params.slug as string,
   );
 
   sendResponse(res, {
@@ -137,24 +137,6 @@ const deleteProduct = catchAsync(async (req, res, next) => {
   });
 });
 
-// ── Variant controllers ──
-
-const checkStock = catchAsync(async (req, res, next) => {
-  const subdomain = req.headers["x-tenant"] as string;
-
-  const result = await productServices.checkStockFromDB(
-    subdomain,
-    req.body.items,
-  );
-
-  sendResponse(res, {
-    statusCode: status.OK,
-    success: true,
-    message: "Stock checked successfully",
-    data: result,
-  });
-});
-
 export const productControllers = {
   createProduct,
   getAllProducts,
@@ -162,6 +144,4 @@ export const productControllers = {
   getProductBySlug,
   updateProduct,
   deleteProduct,
-
-  checkStock,
 };

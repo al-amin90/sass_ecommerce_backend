@@ -146,58 +146,6 @@ const deleteProductFromDB = async (subdomain: string, id: string) => {
   return result;
 };
 
-// ─────────────────────────────────────────
-// STOCK CHECK — order দেওয়ার আগে use করবে
-// ─────────────────────────────────────────
-
-const checkStockFromDB = async (
-  subdomain: string,
-  items: { productId: string; color: string; size: number; quantity: number }[],
-) => {
-  const Product = await getTenantModel(subdomain, "Product");
-
-  const results = await Promise.all(
-    items.map(async (item) => {
-      const product = await Product.findOne({
-        _id: item.productId,
-        isDeleted: false,
-      });
-
-      if (!product) {
-        return { ...item, available: false, currentStock: 0 };
-      }
-
-      // variant খোঁজো
-      const variant = product.variants?.find(
-        (v: TVariant) => v.color === item.color,
-      );
-
-      if (!variant) {
-        return { ...item, available: false, currentStock: 0 };
-      }
-
-      // stock খোঁজো
-      const stock = variant.stock?.find(
-        (s: { size: number; quantity: number }) => s.size === item.size,
-      );
-
-      const currentStock = stock?.quantity ?? 0;
-
-      return {
-        productId: item.productId,
-        color: item.color,
-        size: item.size,
-        requested: item.quantity,
-        currentStock,
-        available: currentStock >= item.quantity,
-      };
-    }),
-  );
-
-  const allAvailable = results.every((r) => r.available);
-  return { allAvailable, items: results };
-};
-
 export const productServices = {
   createProductIntoDB,
   getAllProductsFromDB,
@@ -205,5 +153,4 @@ export const productServices = {
   getProductBySlugFromDB,
   updateProductInDB,
   deleteProductFromDB,
-  checkStockFromDB,
 };

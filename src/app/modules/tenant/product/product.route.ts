@@ -31,7 +31,4 @@ router.patch(
 
 router.delete("/:id", auth("admin"), productControllers.deleteProduct);
 
-// ── Stock check route ──
-router.post("/check-stock", productControllers.checkStock);
-
 export const productRouter = router;
