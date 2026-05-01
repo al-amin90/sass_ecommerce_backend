@@ -85,7 +85,7 @@ const getGuestOrder = catchAsync(
 const updateOrderStatus = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const subdomain = req.headers["x-tenant"] as string;
-    const { orderId } = req.params;
+    const orderId = req.params?.orderId as string;
     const { orderStatus, paymentStatus } = req.body;
 
     const result = await orderService.updateOrderStatusInDB(
@@ -107,7 +107,7 @@ const updateOrderStatus = catchAsync(
 const cancelOrder = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const subdomain = req.headers["x-tenant"] as string;
-    const { orderId } = req.params;
+    const orderId = req.params?.orderId as string;
 
     const result = await orderService.cancelOrderInDB(subdomain, orderId);
 
