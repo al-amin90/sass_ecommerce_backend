@@ -7,7 +7,7 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsup src/server.ts --format cjs --out-dir dist --no-dts",
     "start:prod": "node ./dist/server.js",
     "start:dev": "ts-node-dev --respawn --transpile-only ./src/server.ts",
     "lint": "eslint --ext .ts src/",
@@ -37,6 +37,7 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "prettier": "^3.8.1",
+    "tsup": "^8.5.1",
     "typescript": "^6.0.2"
   }
 }
