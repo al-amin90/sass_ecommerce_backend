@@ -1,18 +1,30 @@
-import { Response } from 'express'
+import { Response } from "express";
+
+type TMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPage: number;
+};
 
 interface IResponse<T> {
-  statusCode: number
-  success: boolean
-  message: string
-  data: T
+  statusCode: number;
+  success: boolean;
+  message: string;
+  data: T;
+  meta?: TMeta;
 }
 
 const sendResponse = <T>(res: Response, data: IResponse<T>) => {
-  res.status(data.statusCode).json({
+  const body: Record<string, unknown> = {
     success: data.success,
     message: data.message,
-    data: data.data,
-  })
-}
+    data: data.data ?? null,
+  };
 
-export default sendResponse
+  if (data.meta) body.meta = data.meta;
+
+  res.status(data.statusCode).json(body);
+};
+
+export default sendResponse;
