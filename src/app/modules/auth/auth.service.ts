@@ -299,84 +299,91 @@ const changePassword = async (
   userData: JwtPayload,
   payload: TChangePassword,
 ) => {
-  const user = await UserModel.isUserExistByCustomId(userData.id);
+  // const UserModel = ModelFactory.getModel<IUser>(
+  //   tenantConn,
+  //   "User",
+  // ) as IUserModel;
 
-  if (!user) {
-    throw new AppError(status.NOT_FOUND, "The User Does't exists");
-  }
+  // const user = await UserModel.isUserExistByCustomId(userData.id);
 
-  const isDeleted = user.isDeleted;
-  if (isDeleted) {
-    throw new AppError(status.FORBIDDEN, "The User is Deleted");
-  }
+  // if (!user) {
+  //   throw new AppError(status.NOT_FOUND, "The User Does't exists");
+  // }
 
-  if (user.status === "blocked") {
-    throw new AppError(status.FORBIDDEN, "The User is Blocked");
-  }
+  // const isDeleted = user.isDeleted;
+  // if (isDeleted) {
+  //   throw new AppError(status.FORBIDDEN, "The User is Deleted");
+  // }
 
-  if (!(await UserModel.isPasswordMatch(payload.oldPassword, user.password))) {
-    throw new AppError(status.FORBIDDEN, "Password do not match");
-  }
+  // if (user.status === "blocked") {
+  //   throw new AppError(status.FORBIDDEN, "The User is Blocked");
+  // }
 
-  const newPassword = await bcrypt.hash(
-    payload.newPassword,
-    Number(config.bcrypt_salt_rounds),
-  );
+  // if (!(await UserModel.isPasswordMatch(payload.oldPassword, user.password))) {
+  //   throw new AppError(status.FORBIDDEN, "Password do not match");
+  // }
 
-  const result = await UserModel.findOneAndUpdate(
-    {
-      id: user.id,
-      role: user.role,
-    },
-    {
-      password: newPassword,
-      needsPasswordChange: false,
-      passwordChangeAt: new Date(),
-    },
-  );
+  // const newPassword = await bcrypt.hash(
+  //   payload.newPassword,
+  //   Number(config.bcrypt_salt_rounds),
+  // );
 
-  return result;
+  // const result = await UserModel.findOneAndUpdate(
+  //   {
+  //     id: user.id,
+  //     role: user.role,
+  //   },
+  //   {
+  //     password: newPassword,
+  //     needsPasswordChange: false,
+  //     passwordChangeAt: new Date(),
+  //   },
+  // );
+
+  return null;
 };
 
 const refreshToken = async (token: string) => {
-  const decoded = jwt.verify(token, config.jwt_refresh_token as string);
-  const { id, iat } = decoded as JwtPayload;
+  // const decoded = jwt.verify(token, config.jwt_refresh_token as string);
+  // const { id, iat } = decoded as JwtPayload;
 
-  const user = await UserModel.isUserExistByCustomId(id);
+  // const user = await UserModel.isUserExistByCustomId(id);
 
-  if (!user) {
-    throw new AppError(status.NOT_FOUND, "The User Does't exists");
-  }
+  // if (!user) {
+  //   throw new AppError(status.NOT_FOUND, "The User Does't exists");
+  // }
 
-  const isDeleted = user.isDeleted;
-  if (isDeleted) {
-    throw new AppError(status.FORBIDDEN, "The User is Deleted");
-  }
+  // const isDeleted = user.isDeleted;
+  // if (isDeleted) {
+  //   throw new AppError(status.FORBIDDEN, "The User is Deleted");
+  // }
 
-  if (user.status === "blocked") {
-    throw new AppError(status.FORBIDDEN, "The User is Blocked");
-  }
+  // if (user.status === "blocked") {
+  //   throw new AppError(status.FORBIDDEN, "The User is Blocked");
+  // }
 
-  if (
-    user.passwordChangeAt &&
-    (await UserModel.isJWTIssuedBeforePassword(
-      user.passwordChangeAt,
-      iat as number,
-    ))
-  ) {
-    throw new AppError(status.UNAUTHORIZED, "You are not authorized. by!");
-  }
+  // if (
+  //   user.passwordChangeAt &&
+  //   (await UserModel.isJWTIssuedBeforePassword(
+  //     user.passwordChangeAt,
+  //     iat as number,
+  //   ))
+  // ) {
+  //   throw new AppError(status.UNAUTHORIZED, "You are not authorized. by!");
+  // }
 
-  const jwtPayload = {
-    id: user._id,
-    role: user.role,
-  };
+  // const jwtPayload = {
+  //   id: user._id,
+  //   role: user.role,
+  // };
 
-  const accessToken = createToken(
-    jwtPayload,
-    config.jwt_access_token as string,
-    config.jwt_access_expires_in as string,
-  );
+  // const accessToken = createToken(
+  //   jwtPayload,
+  //   config.jwt_access_token as string,
+  //   config.jwt_access_expires_in as string,
+  // );
+
+  const accessToken = "asdf";
 
   return {
     accessToken,
