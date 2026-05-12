@@ -181,8 +181,9 @@ const cancelOrderInDB = async (subdomain: string, orderId: string) => {
 const getDashboardStatsFromDB = async (subdomain: string) => {
   try {
     const Order = await getTenantModel(subdomain, "Order");
+    await getTenantModel(subdomain, "Product");
 
-    const allOrders = await Order.find({ tenantId: subdomain });
+    const allOrders = await Order.find();
 
     const totalOrders = allOrders.length;
     const totalRevenue = allOrders.reduce(
@@ -242,7 +243,7 @@ const getDashboardStatsFromDB = async (subdomain: string) => {
     });
 
     // recent 5 orders
-    const recentOrders = await Order.find({ tenantId: subdomain })
+    const recentOrders = await Order.find()
       .sort({ createdAt: -1 })
       .limit(5)
       .populate("items.productId", "name images");

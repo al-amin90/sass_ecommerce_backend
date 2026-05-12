@@ -88,8 +88,6 @@ const updateOrderStatus = catchAsync(
     const orderId = req.params?.orderId as string;
     const { orderStatus, paymentStatus } = req.body;
 
-    console.log("req.body", req.body);
-
     const result = await orderService.updateOrderStatusInDB(
       subdomain,
       orderId,
@@ -126,6 +124,7 @@ const getDashboardStats = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const subdomain = req.headers["x-tenant"] as string;
     const result = await orderService.getDashboardStatsFromDB(subdomain);
+
     sendResponse(res, {
       statusCode: status.OK,
       success: true,
