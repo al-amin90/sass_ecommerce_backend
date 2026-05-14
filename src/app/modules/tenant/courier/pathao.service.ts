@@ -223,6 +223,140 @@ class PathaoService {
 
     return signature === expectedSignature;
   }
+
+  // src/modules/courier/pathao.service.ts (নতুন method যোগ করি)
+
+  // ✅ Sandbox এ Store তৈরি করি
+  async createStore(
+    name: string,
+    contactName: string,
+    contactNumber: string,
+    address: string,
+    cityId: number = 1, // Dhaka
+    zoneId: number = 1,
+    areaId: number = 1,
+  ): Promise<any> {
+    try {
+      const accessToken = await this.getAccessToken();
+
+      console.log(`📍 Creating store in ${this.environment}...`);
+
+      const response = await axios.post(
+        `${this.baseUrl}/aladdin/api/v1/stores`,
+        {
+          name,
+          contact_name: contactName,
+          contact_number: contactNumber,
+          secondary_contact: contactNumber,
+          otp_number: contactNumber,
+          address,
+          city_id: cityId,
+          zone_id: zoneId,
+          area_id: areaId,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          timeout: 10000,
+        },
+      );
+
+      console.log("✅ Store created successfully!");
+      console.log("Response:", response.data);
+
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Failed to create store:");
+      console.error(error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  // ✅ সব available cities পাই
+  async getCities(): Promise<any> {
+    try {
+      const accessToken = await this.getAccessToken();
+
+      console.log("📍 Fetching cities...");
+
+      const response = await axios.get(
+        `${this.baseUrl}/aladdin/api/v1/cities`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          timeout: 10000,
+        },
+      );
+
+      console.log("✅ Cities retrieved:");
+      console.log(response.data);
+
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Failed to fetch cities:");
+      console.error(error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  // ✅ City দিয়ে zones পাই
+  async getZones(cityId: number): Promise<any> {
+    try {
+      const accessToken = await this.getAccessToken();
+
+      console.log(`📍 Fetching zones for city ${cityId}...`);
+
+      const response = await axios.get(
+        `${this.baseUrl}/aladdin/api/v1/zones?city_id=${cityId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          timeout: 10000,
+        },
+      );
+
+      console.log("✅ Zones retrieved:");
+      console.log(response.data);
+
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Failed to fetch zones:");
+      console.error(error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  // ✅ Zone দিয়ে areas পাই
+  async getAreas(zoneId: number): Promise<any> {
+    try {
+      const accessToken = await this.getAccessToken();
+
+      console.log(`📍 Fetching areas for zone ${zoneId}...`);
+
+      const response = await axios.get(
+        `${this.baseUrl}/aladdin/api/v1/areas?zone_id=${zoneId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          timeout: 10000,
+        },
+      );
+
+      console.log("✅ Areas retrieved:");
+      console.log(response.data);
+
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Failed to fetch areas:");
+      console.error(error.response?.data || error.message);
+      throw error;
+    }
+  }
 }
 
 export default PathaoService;

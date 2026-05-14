@@ -13,7 +13,12 @@ const createOrder = catchAsync(
     const subdomain = req.headers["x-tenant"] as string;
     const userId = req.user?._id; // if authenticated
 
-    const result = await orderService.createOrderIntoDB(
+    // const result = await orderService.createOrderIntoDB(
+    //   subdomain,
+    //   userId,
+    //   req.body,
+    // );
+    const result = await orderService.createAndSubmitOrderInDB(
       subdomain,
       userId,
       req.body,

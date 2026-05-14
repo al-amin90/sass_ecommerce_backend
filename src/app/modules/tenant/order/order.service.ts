@@ -8,22 +8,40 @@ import { IOrder } from "./order.interface";
 
 import { Types } from "mongoose";
 
-const createOrderIntoDB = async (
+// ✅ Combined: Create Order + Submit to Courier (Transaction)
+const createAndSubmitOrderInDB = async (
   subdomain: string,
   userId: string | undefined,
   payload: IOrder,
 ) => {
-  try {
-    // Generate order number
-    const Order = await getTenantModel(subdomain, "Order");
+  // ✅ MongoDB Session শুরু করি (Transaction)
+  const session = await (
+    await getTenantModel(subdomain, "Order")
+  ).startSession();
+  session.startTransaction();
 
-    const orderCount = await Order.countDocuments({ tenantId: subdomain });
+  try {
+    console.log(
+      "🔄 Starting transaction for order creation and courier submission",
+    );
+
+    const Order = await getTenantModel<IOrder>(subdomain, "Order");
+    const Product = await getTenantModel(subdomain, "Product");
+    const DeliveryMethod = await getTenantModel<IDeliveryMethod>(
+      subdomain,
+      "DeliveryMethod",
+    );
+
+    // ========== STEP 1: Order তৈরি করি ==========
+    console.log("📝 Step 1: Creating order...");
+
+    const orderCount = await Order.countDocuments(
+      { tenantId: subdomain },
+      { session },
+    );
     const orderNumber = `${subdomain.toUpperCase()}-ORD-${Date.now()}-${orderCount + 1}`;
 
-    const d = 
-
-    // Create order
-    const order = await Order.create({
+    const orderData = {
       tenantId: subdomain,
       userId: userId ? new Types.ObjectId(userId) : null,
       guestCheckout: payload.guestCheckout,
@@ -32,59 +50,22 @@ const createOrderIntoDB = async (
       items: payload.items,
       totalPrice: payload.totalPrice,
       paymentMethod: payload.paymentMethod,
+      paymentStatus: "pending",
+      orderStatus: "pending", // Initially pending
       orderNumber,
-    });
+    };
 
-    // ✅ Populate product details
-    const populatedOrder = await order.populate("items.productId");
+    // Transaction এর মধ্যে create করি
+    const [createdOrder] = await Order.create([orderData], { session });
 
-    return populatedOrder;
-  } catch (error) {
-    throw error;
-  }
-};
+    console.log("✅ Order created:", createdOrder._id);
+    console.log("Order Number:", orderNumber);
 
-const submitOrderToCourierInDB = async (
-  subdomain: string,
-  orderId: string,
-  deliveryMethodId: string,
-) => {
-  const session = await (await getTenantModel(subdomain, "Order")).startSession();
-  session.startTransaction();
+    // ========== STEP 2: Delivery Method খুঁজি ==========
+    console.log("📦 Step 2: Finding delivery method...");
 
-  try {
-    console.log("🚚 Submitting order to courier...");
-
-    const Order = await getTenantModel<IOrder>(subdomain, "Order");
-    const DeliveryMethod = await getTenantModel<IDeliveryMethod>(
-      subdomain,
-      "DeliveryMethod",
-    );
-
-    // Order খুঁজি
-    const order = await Order.findOne(
-      {
-        tenantId: subdomain,
-        _id: new Types.ObjectId(orderId),
-      },
-      null,
-      { session },
-    ).populate("items.productId");
-
-    if (!order) {
-      throw new Error("Order not found");
-    }
-
-    if (order.orderStatus !== "pending") {
-      throw new Error(
-        `Cannot submit order. Current status: ${order.orderStatus}`,
-      );
-    }
-
-    // Delivery Method খুঁজি
     const deliveryMethod = await DeliveryMethod.findOne(
       {
-        _id: new Types.ObjectId(deliveryMethodId),
         isActive: true,
       },
       null,
@@ -95,7 +76,11 @@ const submitOrderToCourierInDB = async (
       throw new Error("Delivery method not found or inactive");
     }
 
-    // Courier এ পাঠাই
+    console.log("✅ Delivery method found:", deliveryMethod);
+
+    // ========== STEP 3: Courier এ order পাঠাই ==========
+    console.log("🚚 Step 3: Submitting order to courier...");
+
     let courierTrackingId: string;
     let courierResponse: any;
 
@@ -103,43 +88,55 @@ const submitOrderToCourierInDB = async (
       const environment = config.pathao_environment;
       const pathaoService = new PathaoService(environment);
 
-      const guestInfo = order.guestInfo;
+      const guestInfo = createdOrder.guestInfo;
 
-      const response = await pathaoService.createOrder(
-        parseInt(deliveryMethod.clientStoreId),
-        order.orderNumber,
-        guestInfo.fullName,
-        guestInfo.phone,
-        guestInfo.address,
-        order.items.length,
-        0.5,
-        order.totalPrice,
-        `Order: ${order.orderNumber}`,
-        `Items: ${order.items
-          .map((i: any) => i.productId?.name || "Product")
-          .join(", ")}`,
-      );
+      try {
+        const response = await pathaoService.createOrder(
+          parseInt(deliveryMethod.clientStoreId),
+          orderNumber,
+          guestInfo.fullName,
+          guestInfo.phone,
+          guestInfo.address,
+          createdOrder.items.length,
+          0.5,
+          createdOrder.totalPrice,
+          `Order: ${orderNumber}`,
+          `Items: ${createdOrder.items
+            .map((i: any) => i.productId?.name || "Product")
+            .join(", ")}`,
+        );
 
-      courierTrackingId = response.data.consignment_id;
-      courierResponse = {
-        consignment_id: response.data.consignment_id,
-        merchant_order_id: response.data.merchant_order_id,
-        order_status: response.data.order_status,
-        delivery_fee: response.data.delivery_fee,
-        environment: environment,
-        createdAt: new Date(),
-      };
+        console.log("✅ Order submitted to Pathao!");
+        console.log("Consignment ID:", response.data.consignment_id);
+
+        courierTrackingId = response.data.consignment_id;
+        courierResponse = {
+          consignment_id: response.data.consignment_id,
+          merchant_order_id: response.data.merchant_order_id,
+          order_status: response.data.order_status,
+          delivery_fee: response.data.delivery_fee,
+          environment: environment,
+          createdAt: new Date(),
+        };
+      } catch (courierError) {
+        console.error("❌ Courier submission failed:", courierError);
+        throw new Error(
+          `Failed to submit order to courier: ${(courierError as Error).message}`,
+        );
+      }
     } else {
       throw new Error(`Unsupported delivery method: ${deliveryMethod.type}`);
     }
 
-    // Order update করি
+    // ========== STEP 4: Order Status Update করি (Transaction এর মধ্যে) ==========
+    console.log("✏️ Step 4: Updating order status...");
+
     const updatedOrder = await Order.findByIdAndUpdate(
-      orderId,
+      createdOrder._id,
       {
         $set: {
-          orderStatus: "processing",
-          deliveryMethodId: new Types.ObjectId(deliveryMethodId),
+          orderStatus: "processing", // Order → Processing
+          deliveryMethodId: deliveryMethod._id,
           courierTrackingId: courierTrackingId,
           courierResponse: courierResponse,
         },
@@ -147,18 +144,175 @@ const submitOrderToCourierInDB = async (
       { new: true, session },
     ).populate("items.productId");
 
+    console.log("✅ Order updated with courier details");
+
+    // ========== STEP 5: Transaction Commit করি ==========
     await session.commitTransaction();
-    console.log("✅ Order submitted to courier successfully");
+    console.log("✅ Transaction committed successfully!");
 
     return updatedOrder;
   } catch (error) {
+    // Transaction Rollback করি যদি কোনো error হয়
     await session.abortTransaction();
-    console.error("❌ Courier submission failed:", error);
+    console.error("❌ Transaction aborted:", error);
     throw error;
   } finally {
+    // Session বন্ধ করি
     await session.endSession();
   }
 };
+
+// const createOrderIntoDB = async (
+//   subdomain: string,
+//   userId: string | undefined,
+//   payload: IOrder,
+// ) => {
+//   try {
+//     // Generate order number
+//     const Order = await getTenantModel(subdomain, "Order");
+
+//     const orderCount = await Order.countDocuments({ tenantId: subdomain });
+//     const orderNumber = `${subdomain.toUpperCase()}-ORD-${Date.now()}-${orderCount + 1}`;
+
+//     const d =
+
+//     // Create order
+//     const order = await Order.create({
+//       tenantId: subdomain,
+//       userId: userId ? new Types.ObjectId(userId) : null,
+//       guestCheckout: payload.guestCheckout,
+//       guestEmail: payload.guestEmail,
+//       guestInfo: payload.guestInfo,
+//       items: payload.items,
+//       totalPrice: payload.totalPrice,
+//       paymentMethod: payload.paymentMethod,
+//       orderNumber,
+//     });
+
+//     // ✅ Populate product details
+//     const populatedOrder = await order.populate("items.productId");
+
+//     return populatedOrder;
+//   } catch (error) {
+//     throw error;
+//   }
+// };
+
+// const submitOrderToCourierInDB = async (
+//   subdomain: string,
+//   orderId: string,
+//   deliveryMethodId: string,
+// ) => {
+//   const session = await (await getTenantModel(subdomain, "Order")).startSession();
+//   session.startTransaction();
+
+//   try {
+//     console.log("🚚 Submitting order to courier...");
+
+//     const Order = await getTenantModel<IOrder>(subdomain, "Order");
+//     const DeliveryMethod = await getTenantModel<IDeliveryMethod>(
+//       subdomain,
+//       "DeliveryMethod",
+//     );
+
+//     // Order খুঁজি
+//     const order = await Order.findOne(
+//       {
+//         tenantId: subdomain,
+//         _id: new Types.ObjectId(orderId),
+//       },
+//       null,
+//       { session },
+//     ).populate("items.productId");
+
+//     if (!order) {
+//       throw new Error("Order not found");
+//     }
+
+//     if (order.orderStatus !== "pending") {
+//       throw new Error(
+//         `Cannot submit order. Current status: ${order.orderStatus}`,
+//       );
+//     }
+
+//     // Delivery Method খুঁজি
+//     const deliveryMethod = await DeliveryMethod.findOne(
+//       {
+//         _id: new Types.ObjectId(deliveryMethodId),
+//         isActive: true,
+//       },
+//       null,
+//       { session },
+//     );
+
+//     if (!deliveryMethod) {
+//       throw new Error("Delivery method not found or inactive");
+//     }
+
+//     // Courier এ পাঠাই
+//     let courierTrackingId: string;
+//     let courierResponse: any;
+
+//     if (deliveryMethod.type === "PATHAO") {
+//       const environment = config.pathao_environment;
+//       const pathaoService = new PathaoService(environment);
+
+//       const guestInfo = order.guestInfo;
+
+//       const response = await pathaoService.createOrder(
+//         parseInt(deliveryMethod.clientStoreId),
+//         order.orderNumber,
+//         guestInfo.fullName,
+//         guestInfo.phone,
+//         guestInfo.address,
+//         order.items.length,
+//         0.5,
+//         order.totalPrice,
+//         `Order: ${order.orderNumber}`,
+//         `Items: ${order.items
+//           .map((i: any) => i.productId?.name || "Product")
+//           .join(", ")}`,
+//       );
+
+//       courierTrackingId = response.data.consignment_id;
+//       courierResponse = {
+//         consignment_id: response.data.consignment_id,
+//         merchant_order_id: response.data.merchant_order_id,
+//         order_status: response.data.order_status,
+//         delivery_fee: response.data.delivery_fee,
+//         environment: environment,
+//         createdAt: new Date(),
+//       };
+//     } else {
+//       throw new Error(`Unsupported delivery method: ${deliveryMethod.type}`);
+//     }
+
+//     // Order update করি
+//     const updatedOrder = await Order.findByIdAndUpdate(
+//       orderId,
+//       {
+//         $set: {
+//           orderStatus: "processing",
+//           deliveryMethodId: new Types.ObjectId(deliveryMethodId),
+//           courierTrackingId: courierTrackingId,
+//           courierResponse: courierResponse,
+//         },
+//       },
+//       { new: true, session },
+//     ).populate("items.productId");
+
+//     await session.commitTransaction();
+//     console.log("✅ Order submitted to courier successfully");
+
+//     return updatedOrder;
+//   } catch (error) {
+//     await session.abortTransaction();
+//     console.error("❌ Courier submission failed:", error);
+//     throw error;
+//   } finally {
+//     await session.endSession();
+//   }
+// };
 
 // ✅ Webhook handler
 const handleCourierWebhookInDB = async (
@@ -448,12 +602,13 @@ const getDashboardStatsFromDB = async (subdomain: string) => {
 };
 
 export default {
-  createOrderIntoDB,
+  createAndSubmitOrderInDB,
+  // createOrderIntoDB,
+  // submitOrderToCourierInDB,
   getAllOrdersFromDB,
   getOrderByIdFromDB,
   getGuestOrderFromDB,
   updateOrderStatusInDB,
   cancelOrderInDB,
   getDashboardStatsFromDB,
-  submitOrderToCourierInDB,
 };
