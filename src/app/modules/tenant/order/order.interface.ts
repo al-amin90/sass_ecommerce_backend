@@ -7,7 +7,13 @@ export interface IOrderItem {
   quantity: number;
   selectedSize: string;
   selectedColor: string;
+  colorId?: Types.ObjectId;
   price: number;
+}
+
+export interface IOrderItemWithVariant extends IOrderItem {
+  variantIndex: number; // Product এর variant array index
+  colorId: Types.ObjectId; // Color ID
 }
 
 export interface IGuestInfo {
