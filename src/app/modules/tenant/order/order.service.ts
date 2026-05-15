@@ -10,6 +10,11 @@ import { Types } from "mongoose";
 import stockValidationService from "./stockValidation.service";
 import status from "http-status";
 import AppError from "../../../errors/AppError";
+import {
+  VALID_ORDER_STATUSES,
+  VALID_PAYMENT_STATUSES,
+  VALID_STATUS_TRANSITIONS,
+} from "./order.const";
 
 // ✅ Combined: Create Order + Submit to Courier (Transaction)
 const createAndSubmitOrderInDB = async (
@@ -452,39 +457,134 @@ const getGuestOrderFromDB = async (
   }
 };
 
+// ✅ Improved updateOrderStatusInDB
 const updateOrderStatusInDB = async (
   subdomain: string,
   orderId: string,
   orderStatus?: string,
   paymentStatus?: string,
 ) => {
+  const session = await (
+    await getTenantModel(subdomain, "Order")
+  ).startSession();
+  session.startTransaction();
+
   try {
-    const Order = await getTenantModel(subdomain, "Order");
+    console.log("🔄 Updating order status...");
+    console.log("Order ID:", orderId);
+    console.log("New Order Status:", orderStatus);
+    console.log("New Payment Status:", paymentStatus);
 
-    const updateData: any = {};
+    const Order = await getTenantModel<IOrder>(subdomain, "Order");
 
-    if (orderStatus) {
-      updateData.orderStatus = orderStatus;
+    // ✅ Step 1: Validate orderId format
+    if (!Types.ObjectId.isValid(orderId)) {
+      throw new AppError(status.BAD_REQUEST, "Invalid order ID format");
     }
-    if (paymentStatus) {
-      updateData.paymentStatus = paymentStatus;
-    }
 
-    const order = await Order.findOneAndUpdate(
+    // ✅ Step 2: Find order with tenantId verification
+    const order = await Order.findOne(
       {
         _id: new Types.ObjectId(orderId),
       },
-      updateData,
-      { new: true },
+      null,
+      { session },
     ).populate("items.productId");
 
     if (!order) {
-      throw new Error("Order not found");
+      throw new AppError(status.NOT_FOUND, "Order not found");
     }
 
-    return order;
+    console.log(`✅ Order found: ${order.orderNumber}`);
+    console.log(`Current status: ${order.orderStatus}`);
+
+    // ✅ Step 3: Validate and apply status updates
+    const updateData: any = {};
+
+    if (orderStatus) {
+      // Validate status value
+      if (!VALID_ORDER_STATUSES.includes(orderStatus)) {
+        throw new AppError(
+          status.BAD_REQUEST,
+          `Invalid order status. Must be one of: ${VALID_ORDER_STATUSES.join(", ")}`,
+        );
+      }
+
+      // Validate status transition
+      const allowedTransitions =
+        VALID_STATUS_TRANSITIONS[order.orderStatus] || [];
+
+      if (!allowedTransitions.includes(orderStatus)) {
+        throw new AppError(
+          status.BAD_REQUEST,
+          `Cannot transition from "${order.orderStatus}" to "${orderStatus}". Allowed transitions: ${allowedTransitions.join(", ")}`,
+        );
+      }
+
+      console.log(`✅ Valid transition: ${order.orderStatus} → ${orderStatus}`);
+
+      updateData.orderStatus = orderStatus;
+
+      // ✅ If cancelling, restore stock
+      if (orderStatus === "cancelled") {
+        console.log("📈 Restoring stock for cancelled order...");
+
+        await stockValidationService.restoreStock(
+          subdomain,
+          order.items as any,
+        );
+
+        console.log("✅ Stock restored");
+
+        updateData.paymentStatus = "failed";
+      }
+    }
+
+    if (paymentStatus) {
+      // Validate payment status
+      if (!VALID_PAYMENT_STATUSES.includes(paymentStatus)) {
+        throw new AppError(
+          status.BAD_REQUEST,
+          `Invalid payment status. Must be one of: ${VALID_PAYMENT_STATUSES.join(", ")}`,
+        );
+      }
+
+      console.log(
+        `✅ Payment status: ${order.paymentStatus} → ${paymentStatus}`,
+      );
+
+      updateData.paymentStatus = paymentStatus;
+    }
+
+    // ✅ Step 4: Ensure at least one field is being updated
+    if (Object.keys(updateData).length === 0) {
+      throw new AppError(status.BAD_REQUEST, "No valid fields to update");
+    }
+
+    // ✅ Step 5: Update order with timestamp
+    updateData.updatedAt = new Date();
+
+    const updatedOrder = await Order.findOneAndUpdate(
+      {
+        tenantId: subdomain,
+        _id: new Types.ObjectId(orderId),
+      },
+      { $set: updateData },
+      { new: true, session, runValidators: true },
+    )
+      .populate("items.productId")
+      .populate("deliveryMethodId");
+
+    await session.commitTransaction();
+    console.log("✅ Order status updated successfully");
+
+    return updatedOrder;
   } catch (error) {
+    await session.abortTransaction();
+    console.error("❌ Error updating order status:", error);
     throw error;
+  } finally {
+    await session.endSession();
   }
 };
 
